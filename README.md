@@ -20,12 +20,21 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [docs/03-etape-1-donnees.md](docs/03-etape-1-donnees.md) | Collecte, anonymisation, RGPD, schéma de métadonnées |
 | [docs/03b-inventaire-sources.md](docs/03b-inventaire-sources.md) | Inventaire vérifié des sources, licences, analyse de contenu |
 | [docs/03c-plan-composition-dataset.md](docs/03c-plan-composition-dataset.md) | Composition chiffrée des jeux SFT et DPO, règles anti-fuite |
+| [docs/03d-anonymisation-rgpd.md](docs/03d-anonymisation-rgpd.md) | Stratégie de masquage, contrôle qualité mesuré, traçabilité |
 | [docs/04-etape-2-sft-dpo.md](docs/04-etape-2-sft-dpo.md) | SFT + LoRA, alignement DPO, métriques |
 | [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Docker, FastAPI, vLLM, CI/CD, go/no-go |
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |
 
+## Installation
+
+```bash
+uv sync
+uv run pytest
+```
+
 ## État
 
-Cadrage terminé. Stack technique en cours de validation — voir
-[docs/99-decisions.md](docs/99-decisions.md).
+Semaine 1 en cours : ingestion des corpus et chaîne d'anonymisation
+opérationnelles et testées. Voir [docs/99-decisions.md](docs/99-decisions.md)
+pour les décisions techniques.

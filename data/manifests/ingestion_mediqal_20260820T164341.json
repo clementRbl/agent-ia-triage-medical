@@ -1,0 +1,41 @@
+{
+  "etape": "ingestion_mediqal",
+  "entrees": [
+    "hf://ANR-MALADES/MediQAl"
+  ],
+  "sorties": [
+    "data/raw/mediqal__oeq__test.parquet",
+    "data/raw/mediqal__mcqu__train.parquet",
+    "data/raw/mediqal__mcqu__validation.parquet",
+    "data/raw/mediqal__mcqu__test.parquet",
+    "data/raw/mediqal__mcqm__train.parquet",
+    "data/raw/mediqal__mcqm__validation.parquet",
+    "data/raw/mediqal__mcqm__test.parquet"
+  ],
+  "empreintes": {
+    "data/raw/mediqal__oeq__test.parquet": "5985541ebcb427b3e8eb1cfe4d013731bf86e55b2b58e64128daaf901bd05404",
+    "data/raw/mediqal__mcqu__train.parquet": "dbe3c5c1dee0a6f3635d6585a54896addcb1401e80b5cbcc78696b13f0669285",
+    "data/raw/mediqal__mcqu__validation.parquet": "a57af703887ecc9673a99eb7715433e610cd9a806d5974b9c09edacf9b7dd4ef",
+    "data/raw/mediqal__mcqu__test.parquet": "8c8f4c7c621f8dde6816361a0b27a37ce7a94296e25ba9dc9f642aad485382f8",
+    "data/raw/mediqal__mcqm__train.parquet": "da1f5614d74eed0769fd2abb9cbc4a00cc7ca42f45fa1060803fe3eb01073a0c",
+    "data/raw/mediqal__mcqm__validation.parquet": "4cb6b61ab8c637fdbb596f627f9bc0b5410d8e02f158d429f0c2228eef587b07",
+    "data/raw/mediqal__mcqm__test.parquet": "f82a8739aa992761728a8708d410dad1f2038b31e7ee2294b4b323cd5abfd446"
+  },
+  "nb_lignes": {
+    "data/raw/mediqal__oeq__test.parquet": 4969,
+    "data/raw/mediqal__mcqu__train.parquet": 10113,
+    "data/raw/mediqal__mcqu__validation.parquet": 2561,
+    "data/raw/mediqal__mcqu__test.parquet": 4343,
+    "data/raw/mediqal__mcqm__train.parquet": 5767,
+    "data/raw/mediqal__mcqm__validation.parquet": 1466,
+    "data/raw/mediqal__mcqm__test.parquet": 3384
+  },
+  "parametres": {
+    "depot": "ANR-MALADES/MediQAl",
+    "langue": "fr",
+    "licence": "CC-BY-4.0"
+  },
+  "statistiques": {},
+  "horodatage": "2026-08-20T16:43:41.111969+00:00",
+  "revision_code": "e50bf8c"
+}
