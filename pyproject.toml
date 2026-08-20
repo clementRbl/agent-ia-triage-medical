@@ -55,3 +55,6 @@ ignore = ["ANN401"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = [
+    "integrite: contrôles portant sur les artefacts de données réels",
+]

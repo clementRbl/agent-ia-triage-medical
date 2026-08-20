@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"
+
+jobs:
+  qualite:
+    name: Lint et format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installer les dependances
+        run: uv sync --group dev
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Format
+        run: uv run ruff format --check .
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installer les dependances
+        # Les modeles spaCy sont epingles dans pyproject.toml : le cache uv
+        # evite de les retelecharger a chaque execution.
+        run: uv sync --group dev
+
+      - name: Tests
+        run: uv run pytest -q -m "not integrite"
+
+  donnees:
+    name: Integrite du jeu de donnees
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installer les dependances
+        run: uv sync --group dev
+
+      - name: Verifier l'absence de fuite entre les jeux
+        # Garde-fou du cahier des charges : ne jamais melanger entrainement
+        # et evaluation, et empreintes d'audit toujours valides. Les controles
+        # sont ignores tant que l'artefact concerne n'est pas produit.
+        run: uv run pytest -q -m "integrite"
