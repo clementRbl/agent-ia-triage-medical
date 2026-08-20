@@ -35,7 +35,7 @@ packages = ["src/triage"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests"]
+src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ANN", "T20"]
@@ -47,6 +47,7 @@ ignore = ["ANN401"]
 # regulieres : les corpus l'utilisent aussi bien que l'apostrophe droite.
 "src/triage/data/anonymize.py" = ["RUF001"]
 "src/triage/data/lexique_medical.py" = ["RUF001"]
+"scripts/*" = ["T20"]  # un script de demonstration affiche, par definition
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
