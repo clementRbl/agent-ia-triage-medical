@@ -51,6 +51,7 @@ ignore = ["ANN401"]
 "src/triage/data/anonymize.py" = ["RUF001"]
 "src/triage/data/lexique_medical.py" = ["RUF001"]
 "scripts/*" = ["T20"]  # un script de demonstration affiche, par definition
+"notebooks/*" = ["T20"]  # dans un notebook, l'affichage *est* la sortie
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
