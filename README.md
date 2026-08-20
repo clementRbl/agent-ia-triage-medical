@@ -42,6 +42,16 @@ uv sync
 uv run pytest
 ```
 
+## Intégration continue
+
+Trois jobs GitHub Actions sur chaque PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)) :
+
+| Job | Contrôle |
+|---|---|
+| Lint et format | `ruff check` + `ruff format --check` sur tout le dépôt, notebooks compris |
+| Tests | suite unitaire |
+| Intégrité du jeu de données | empreintes des manifestes, seuil de PII résiduelle, absence de fuite entre les jeux |
+
 ## État
 
 Semaine 1 en cours : ingestion des corpus et chaîne d'anonymisation

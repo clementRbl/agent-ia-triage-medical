@@ -20,6 +20,10 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-08-20 | Splits **par `clinical_case`** et partition des `prompt_id` | Plusieurs questions partagent un même cas clinique → un split par ligne provoquerait une fuite train/éval |
 | 2026-08-20 | Exclusion des paires DPO `label_type == "length"` | Biais de longueur connu, fausserait l'alignement |
 
+| 2026-08-20 | Découpage **par groupe** via empreinte du `clinical_case` | Affectation déterministe et stable quand le corpus grandit ; un découpage ligne à ligne ferait fuiter un même cas entre train et test |
+| 2026-08-20 | CI mise en place dès la semaine 1 | Garde toutes les PR suivantes et avance le livrable 4 |
+| 2026-08-20 | Notebook d'exploration important `src/`, sans logique propre | Reproductibilité : les mêmes traitements tournent en exploration, en production et sous CI |
+
 ## À trancher
 
 | Sujet | Options | Statut |
@@ -27,3 +31,4 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | Hébergement de l'endpoint | RunPod / Scaleway / HF Endpoints / autre | ⏳ à trancher avant S4 |
 | Volume du jeu DPO | 1 000 / 2 000 / 3 000 paires | ⏳ à calibrer en S3 |
 | Hébergement du dataset | HF Hub (public/privé) / repo git + LFS | ⏳ |
+| Vérificateur de types | `ty` (Astral) / `mypy` | ⏳ job CI à ajouter une fois choisi |
