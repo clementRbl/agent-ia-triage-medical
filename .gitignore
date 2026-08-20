@@ -1,0 +1,34 @@
+# Assistants / outils locaux — ne jamais versionner
+AGENTS.md
+CLAUDE.md
+.claude/
+.cursor/
+.aider*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Données et artefacts lourds
+data/raw/
+data/interim/
+outputs/
+checkpoints/
+*.safetensors
+*.gguf
+wandb/
+mlruns/
+
+# Divers
+.ipynb_checkpoints/
+.DS_Store
