@@ -32,3 +32,6 @@ mlruns/
 # Divers
 .ipynb_checkpoints/
 .DS_Store
+
+# Notebooks
+.ipynb_checkpoints/

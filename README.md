@@ -26,6 +26,15 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |
 
+## Exploration
+
+```bash
+uv run jupyter lab notebooks/01_exploration_corpus.ipynb
+```
+
+Le notebook caractérise les corpus et contrôle la chaîne d'anonymisation. Il
+importe `src/triage/` : aucune logique n'y est dupliquée.
+
 ## Installation
 
 ```bash
