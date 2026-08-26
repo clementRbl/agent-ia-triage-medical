@@ -34,8 +34,8 @@ L'agent doit :
 
 | Phase | Intitulé | Contenu | Périmètre POC |
 |-------|----------|---------|---------------|
-| 1 | Validation conceptuelle | Déploiement de **Qwen3-1.7B-Base** : valider vite les hypothèses techniques et l'acceptabilité clinique | ✅ dans le POC |
-| 2 | Optimisation ciblée | **SFT + LoRA**, puis alignement par préférences **DPO** sur protocoles médicaux | ✅ dans le POC |
+| 1 | Validation conceptuelle | Déploiement de **Qwen3-1.7B-Base** : valider vite les hypothèses techniques et l'acceptabilité clinique | ✅ réalisé |
+| 2 | Optimisation ciblée | **SFT + LoRA**, puis alignement par préférences **DPO** sur protocoles médicaux | ✅ réalisé |
 | 3 | Projection industrielle | Passage à des modèles 32B+, datasets étendus, architecture de données médicales soignée (symptomatologie, antécédents, constantes vitales, protocoles de triage) | ➡️ roadmap uniquement |
 
 ## Hypothèse de départ
@@ -51,3 +51,9 @@ rigoureuse et d'une validation approfondie avant tout déploiement clinique.
 - Statut réglementaire (dispositif médical / MDR, AI Act) : hors périmètre du
   POC, à documenter comme point de vigilance dans la roadmap.
 - Aucune donnée patient réelle n'est utilisée : corpus publics anonymisés.
+- Le barème de triage est une transposition simplifiée de l'échelle FRENCH,
+  **non validée par un clinicien**. Sa validation par le comité médical du CHSA
+  est un prérequis à toute phase 2.
+- Les performances mesurées portent sur des cas **construits**, pas sur des
+  passages réels aux urgences. Elles démontrent la faisabilité technique, pas
+  l'efficacité clinique.

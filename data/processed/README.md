@@ -19,7 +19,7 @@ size_categories:
 
 Jeu de données construit pour le POC d'agent d'aide au triage des urgences du
 Centre Hospitalier Saint-Aurélien. Deux jeux : **SFT** (5 000 paires
-instruction-réponse) et **DPO** (2 667 paires préférentielles).
+instruction-réponse) et **DPO** (3 000 paires préférentielles).
 
 > ⚠️ **Usage** : recherche et démonstration. Ce corpus ne constitue pas une
 > référence clinique. Le barème de triage n'a pas été validé par un clinicien.
@@ -37,24 +37,44 @@ instruction-réponse) et **DPO** (2 667 paires préférentielles).
 **Splits** : train 3 986 · validation 488 · test 526
 **Longueur médiane** : instruction 595 caractères, réponse 326
 
-## Jeu DPO — 2 667 paires
+## Jeu DPO — 3 000 paires
 
 | Type | Volume | Origine |
 |---|---|---|
 | `hard` | 1 323 | UltraMedical, préférence difficile |
 | `easy` | 677 | UltraMedical, préférence nette |
-| `sous_triage` | 667 | construit : la réponse rejetée minore la priorité |
+| `sous_triage` | 501 | construit : la réponse rejetée minore la priorité |
+| `sur_triage` | 499 | construit : la réponse rejetée majore la priorité |
 
-**Splits** : train 2 132 · validation 273 · test 262
+**Splits** : train 2 394 · validation 302 · test 304
 
 Les paires étiquetées `length` par la source sont **exclues** : elles sont
 départagées sur la longueur de la réponse, biais connu qui apprendrait au
 modèle à être bavard plutôt que juste.
 
-Les paires `sous_triage` ciblent l'erreur dangereuse. La réponse rejetée est
-**cohérente avec elle-même** — elle annonce une priorité plus basse *et*
-déclare des constantes normales — parce qu'un sous-triage réel provient de
-critères non relevés, pas d'une contradiction visible.
+### Les deux sens d'erreur sont représentés
+
+Une première version ne rejetait que des réponses **minorant** la priorité, en
+visant le sous-triage. Le signal était alors unidirectionnel, et un modèle
+entraîné dessus a appris la consigne triviale « annonce toujours le niveau le
+plus haut » : 57 % de sur-triage, exactitude tombée de 91,9 % à 42,4 %.
+
+Chaque niveau produit donc l'erreur ou les erreurs qui lui sont possibles : une
+urgence maximale ne peut être que minorée, une prise en charge différée que
+majorée, un cas modéré alterne entre les deux.
+
+Les contre-exemples imitent des erreurs réelles. Le sous-triage annonce un
+niveau bas *et* déclare des constantes normales — les critères n'ont pas été
+relevés. Le sur-triage cite les critères réellement remplis mais en tire une
+conclusion trop grave, ou majore sans aucun critère objectivable.
+
+> ⚠️ **À lire avant d'utiliser les paires de triage.** Elles portent sur une
+> décision à **vérité terrain déterministe**, ce qui ne convient pas au DPO.
+> Entraîner dessus dégrade le modèle, y compris avec un signal équilibré
+> (13 urgences vitales manquées sur 31). Elles sont conservées pour la
+> reproductibilité de l'expérience, documentée dans
+> `docs/04b-resultats-entrainement.md`. Le modèle livré est aligné sur les
+> seules paires UltraMedical.
 
 ## Schéma
 
@@ -117,6 +137,8 @@ sources.
 - Le bloc B ne comporte pas de justification : les corpus sources n'en
   fournissent pas.
 - L'urgence est sous-représentée dans les corpus d'origine (5,3 % des questions).
+- Les paires de préférence portant sur le triage **ne doivent pas servir à
+  l'alignement** (voir l'avertissement ci-dessus).
 
 ## Reproduction
 

@@ -33,6 +33,11 @@ annotées** par des humains, en indiquant laquelle est préférée.
 | **POC** | *Proof of Concept* — démontre la faisabilité, n'est pas un produit de production. |
 | **Sous-triage** | Classer un cas critique comme non urgent. Erreur la plus dangereuse pour ce système. |
 | **Sur-triage** | Classer un cas bénin comme urgence maximale. Coûteux mais non dangereux. |
+| **Sous-triage critique** | Minorer une **urgence maximale**. Métrique de sécurité de premier rang : c'est elle qui décide d'un déploiement clinique, pas l'exactitude globale. |
+| **Adaptateur** | Les poids LoRA seuls, hors modèle de base. 67 Mo ici, contre 3,4 Go pour le modèle complet. |
+| **`rewards/margins`** | En DPO, l'écart que le modèle creuse entre la réponse retenue et la réponse écartée. Mesure l'alignement, **pas** la qualité clinique. |
+| **Ablation** | Retirer un composant pour mesurer sa contribution réelle. Ici : retirer les paires de triage du jeu DPO pour isoler la cause d'une dégradation. |
+| **Motif réservé** | Motif de recours utilisé uniquement à l'évaluation. Distingue l'apprentissage d'une règle de la mémorisation d'un gabarit. |
 
 ## Sources de données citées
 

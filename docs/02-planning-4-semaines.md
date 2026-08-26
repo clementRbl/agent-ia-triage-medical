@@ -40,9 +40,24 @@ Objectif : affiner le comportement du modèle sur les attentes cliniques.
 
 ## Vue synthétique
 
-| Semaine | Focus | Sortie concrète |
-|---|---|---|
-| S1 | Données | `data/` SFT 5k + DPO, anonymisés, splits train/val/test |
-| S2 | SFT + LoRA | adaptateur SFT + métriques intermédiaires |
-| S3 | DPO | adaptateur aligné + comparaison base/SFT/DPO |
-| S4 | Déploiement | endpoint vLLM + CI/CD + rapport PDF |
+| Semaine | Focus | Sortie concrète | État |
+|---|---|---|---|
+| S1 | Données | 5 000 paires SFT + 3 000 paires DPO, anonymisées, splits sans fuite | ✅ |
+| S2 | SFT + LoRA | adaptateur 67 Mo, 91,92 % d'exactitude, 0 urgence manquée | ✅ |
+| S3 | DPO | adaptateur aligné, comparaison base/SFT/DPO, 92,93 % | ✅ |
+| S4 | Déploiement | endpoint vLLM + CI/CD de déploiement + rapport PDF | ⏳ |
+
+Résultats mesurés : [04b — Résultats d'entraînement](04b-resultats-entrainement.md).
+
+## Écarts par rapport au planning initial
+
+- **Sources de données** : MediQA, FrenchMedMCQA et MedQuAD n'étaient plus
+  accessibles. MediQAl et UltraMedical-Preference les remplacent —
+  [03b](03b-inventaire-sources.md).
+- **Cas de triage** : aucun corpus disponible ne porte de niveau de priorité.
+  Un bloc de cas construits par règles explicites comble ce manque —
+  [03c](03c-plan-composition-dataset.md).
+- **DPO** : trois runs ont été nécessaires. Les deux premiers dégradaient le
+  modèle ; une ablation a isolé la cause — [04b](04b-resultats-entrainement.md).
+- **CI/CD** : mise en place dès la semaine 1 plutôt qu'en semaine 4, pour
+  garder toutes les livraisons suivantes.

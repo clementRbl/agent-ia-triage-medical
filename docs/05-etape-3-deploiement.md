@@ -51,6 +51,18 @@ Client (curl / UI démo)
       GPU cloud
 ```
 
+### Points à reporter de l'entraînement vers le service
+
+- Le gabarit de conversation doit être appliqué avec **`enable_thinking=False`** :
+  le bloc `<think></think>` est alors pré-rempli dans l'invite et le modèle
+  génère directement la réponse, comme à l'entraînement.
+- La génération d'évaluation est **déterministe** (`do_sample=False`). L'endpoint
+  de démonstration doit l'être aussi pour qu'une même entrée donne toujours la
+  même orientation — exigence d'auditabilité.
+- L'adaptateur peut être **servi tel quel par vLLM** (LoRA à chaud) ou fusionné
+  au modèle de base. La fusion accélère l'inférence, l'adaptateur séparé
+  facilite le retour arrière.
+
 ## Traçabilité des interactions (exigence client)
 
 Chaque interaction doit être auditable :
@@ -61,7 +73,11 @@ Chaque interaction doit être auditable :
 
 ## Checklist go / no-go (à compléter en S4)
 
-- [ ] Taux de sous-triage sous le seuil défini en S2
+- [ ] **Jeu d'évaluation clinique élargi** — avec 40 urgences, l'intervalle de
+      confiance du taux de sous-triage critique va de 5,5 % à 26,1 %. Aucun
+      seuil n'est fixable sur une telle imprécision : c'est le prérequis
+      numéro un, avant toute autre optimisation.
+- [ ] Taux de sous-triage critique sous le seuil défini
 - [ ] Latence P95 sous le seuil défini
 - [ ] Endpoint protégé par authentification
 - [ ] Logs d'audit complets et sans PII

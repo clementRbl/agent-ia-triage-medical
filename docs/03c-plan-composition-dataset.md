@@ -38,10 +38,15 @@ médical avant toute phase 2).
   `label_type == "length"`** (biais de longueur).
 - Complément **triage** : pour chaque cas du bloc D, une réponse `chosen`
   (priorité correcte + justification + orientation) et une réponse `rejected`
-  illustrant une erreur réaliste — **prioritairement du sous-triage**, l'erreur
-  la plus dangereuse.
-- Volume cible à calibrer en S3 selon le budget GPU (1 000 à 3 000 paires
-  suffisent largement pour un DPO sur 1,7B).
+  illustrant une erreur réaliste, dans **les deux sens** — sous-triage et
+  sur-triage.
+- Volume produit : **3 000 paires** (2 000 UltraMedical + 1 000 triage).
+
+> ⚠️ **Retour d'expérience.** Les 1 000 paires de triage **ne doivent pas servir
+> à l'alignement**. Le triage a une vérité terrain déterministe, à laquelle le
+> DPO ne convient pas : entraîner dessus dégrade le modèle, y compris avec un
+> signal équilibré. Elles restent dans le jeu pour la reproductibilité de
+> l'expérience. Détail dans [04b](04b-resultats-entrainement.md).
 
 ## Règles anti-fuite (exigence « ne pas mélanger train et éval »)
 

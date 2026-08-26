@@ -35,11 +35,21 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-08-26 | Lot de 2 × accumulation 8 | Le lot de 4 tient en VRAM (6,26 Go contre 5,99) mais ne change pas le débit : l'entraînement est limité par le calcul |
 | 2026-08-26 | Accès par dictionnaire plutôt que `itertuples` | Les attributs d'un namedtuple pandas sont construits à l'exécution, donc invérifiables statiquement |
 
+| 2026-08-26 | Fenêtre d'entraînement à **1 024 tokens** | Mesuré : p99 à 988, 0,66 % d'exemples tronqués ; 1 536 n'en récupérerait que 0,64 % de plus |
+| 2026-08-26 | SFT : lot 2 × accumulation 8 ; DPO : lot 1 × accumulation 16 | Le DPO concatène les deux branches, un lot de 2 y produit 2,2 Go de logits |
+| 2026-08-26 | `PYTORCH_CUDA_ALLOC_CONF=expandable_segments` pour le DPO | Les paires ont des longueurs très variables, ce qui fragmente le tas CUDA |
+| 2026-08-26 | Six **motifs de recours réservés à l'évaluation** | Le jeu de test réutilise les motifs d'entraînement ; sans motifs inédits on mesure la mémorisation des gabarits |
+| 2026-08-26 | **Taux de sous-triage critique** comme métrique de premier rang | L'exactitude globale masque le mode de défaillance dangereux : 91,9 % → 87,5 % pendant que les urgences manquées passent de 0 % à 12,5 % |
+| 2026-08-26 | **Les paires de triage sont exclues de l'alignement** | Le triage a une vérité terrain déterministe, à laquelle le DPO ne convient pas. L'ablation le démontre : 64,65 % avec, 92,93 % sans |
+| 2026-08-26 | Modèle livré : **SFT + DPO sur les seules paires UltraMedical** | Conforme au cahier des charges, et seule variante qui préserve la sécurité (31/31 urgences identifiées) |
+
 ## À trancher
 
 | Sujet | Options | Statut |
 |---|---|---|
 | Hébergement de l'endpoint | RunPod / Scaleway / HF Endpoints / autre | ⏳ à trancher avant S4 |
-| ~~Volume du jeu DPO~~ | 2 667 paires produites | ✅ tranché |
+| ~~Volume du jeu DPO~~ | 3 000 paires produites, dont 2 000 servent à l'alignement | ✅ tranché |
 | Hébergement du dataset | HF Hub (public/privé) / repo git + LFS | ⏳ |
+| Publication des poids | HF Hub / pièce jointe au livrable | ⏳ 134 Mo au total |
+| Élargissement du jeu d'évaluation clinique | 40 urgences → combien ? | ⏳ **prérequis au go/no-go** |
 
