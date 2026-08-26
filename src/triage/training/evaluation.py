@@ -58,6 +58,7 @@ class ResultatEvaluation:
     total: int = 0
     exacts: int = 0
     sous_triages: int = 0
+    sous_triages_critiques: int = 0
     sur_triages: int = 0
     sans_niveau: int = 0
     matrice: dict[str, dict[str, int]] = field(default_factory=dict)
@@ -73,6 +74,24 @@ class ResultatEvaluation:
         return self.sous_triages / self.total if self.total else 0.0
 
     @property
+    def taux_sous_triage_critique(self) -> float:
+        """Part des urgences maximales minorees, rapportee au nombre d'urgences.
+
+        C'est le chiffre qui decide d'un deploiement clinique. Le taux de
+        sous-triage global le dilue : minorer un cas modere encombre le
+        parcours, minorer une urgence vitale met un patient en danger. Les
+        deux ne se comparent pas.
+        """
+        critiques = sum(
+            ligne_reelle
+            for niveau, ligne_reelle in (
+                (n, sum(self.matrice.get(n.value, {}).values())) for n in NiveauPriorite
+            )
+            if niveau is NiveauPriorite.MAXIMALE
+        )
+        return self.sous_triages_critiques / critiques if critiques else 0.0
+
+    @property
     def taux_sur_triage(self) -> float:
         return self.sur_triages / self.total if self.total else 0.0
 
@@ -86,6 +105,8 @@ class ResultatEvaluation:
             "total": self.total,
             "exactitude": round(self.exactitude, 4),
             "taux_sous_triage": round(self.taux_sous_triage, 4),
+            "taux_sous_triage_critique": round(self.taux_sous_triage_critique, 4),
+            "sous_triages_critiques": self.sous_triages_critiques,
             "taux_sur_triage": round(self.taux_sur_triage, 4),
             "taux_sans_niveau": round(self.taux_sans_niveau, 4),
             "exacts": self.exacts,
@@ -126,6 +147,8 @@ def comparer(
             resultat.exacts += 1
         elif RANG[predit] < RANG[attendu]:
             resultat.sous_triages += 1
+            if attendu is NiveauPriorite.MAXIMALE:
+                resultat.sous_triages_critiques += 1
             if len(resultat.exemples_sous_triage) < max_exemples:
                 resultat.exemples_sous_triage.append(
                     {

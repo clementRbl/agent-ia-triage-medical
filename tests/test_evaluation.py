@@ -85,3 +85,27 @@ class TestComparaison:
         r = comparer([], [], "vide")
         assert r.exactitude == 0.0
         assert r.taux_sous_triage == 0.0
+
+
+class TestSousTriageCritique:
+    """La minoration d'une urgence vitale est comptee a part du reste."""
+
+    def test_urgence_minoree_comptee_comme_critique(self):
+        r = comparer([MAX, MAX, MOD], [MOD, MAX, DIF], "critique")
+        assert r.sous_triages == 2  # MAX→MOD et MOD→DIF
+        assert r.sous_triages_critiques == 1  # seul MAX→MOD l'est
+        assert r.taux_sous_triage_critique == 0.5  # 1 sur 2 urgences maximales
+
+    def test_minorer_un_cas_modere_n_est_pas_critique(self):
+        r = comparer([MOD, MOD], [DIF, DIF], "moderes")
+        assert r.sous_triages == 2
+        assert r.sous_triages_critiques == 0
+        assert r.taux_sous_triage_critique == 0.0
+
+    def test_sans_urgence_dans_le_jeu(self):
+        r = comparer([MOD, DIF], [MOD, DIF], "sans_urgence")
+        assert r.taux_sous_triage_critique == 0.0
+
+    def test_toutes_les_urgences_identifiees(self):
+        r = comparer([MAX, MAX, MAX], [MAX, MAX, MAX], "parfait")
+        assert r.taux_sous_triage_critique == 0.0
