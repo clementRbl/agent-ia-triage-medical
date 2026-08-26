@@ -54,7 +54,7 @@ def _config_entrainement(config: ConfigSFT, nb_exemples: int, pas_max: int | Non
         num_train_epochs=config.epochs,
         max_steps=pas_max or -1,
         per_device_train_batch_size=config.taille_lot,
-        per_device_eval_batch_size=config.taille_lot,
+        per_device_eval_batch_size=config.taille_lot_eval,
         gradient_accumulation_steps=config.accumulation,
         learning_rate=config.taux_apprentissage,
         lr_scheduler_type=config.planificateur,

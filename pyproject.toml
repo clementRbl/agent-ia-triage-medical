@@ -61,6 +61,8 @@ ignore = ["ANN401"]
 # regulieres : les corpus l'utilisent aussi bien que l'apostrophe droite.
 "src/triage/data/anonymize.py" = ["RUF001"]
 "src/triage/data/lexique_medical.py" = ["RUF001"]
+# La variable d'environnement CUDA doit etre posee avant les imports de torch.
+"src/triage/training/dpo.py" = ["E402"]
 "scripts/*" = ["T20"]  # un script de demonstration affiche, par definition
 "notebooks/*" = ["T20"]  # dans un notebook, l'affichage *est* la sortie
 

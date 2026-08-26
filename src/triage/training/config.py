@@ -54,6 +54,7 @@ class ConfigSFT:
     # Lot : 2 x 8 = 16 exemples par pas d'optimisation. La taille reelle est
     # contrainte par les 10 Go de la carte, l'accumulation compense.
     taille_lot: int = 2
+    taille_lot_eval: int = 2
     accumulation: int = 8
     longueur_max: int = LONGUEUR_MAX
 
@@ -94,5 +95,14 @@ class ConfigDPO(ConfigSFT):
     epochs: float = 1.0
     taux_apprentissage: float = 5e-6
     beta: float = 0.1
+    # Le DPO concatene les branches choisie et rejetee en une seule passe :
+    # un lot de 2 produit donc 4 sequences. Avec un vocabulaire de 151 936
+    # tokens, les logits en fp32 atteignent 2,2 Go, ce qui sature la carte.
+    # Un lot de 1 ramene le pic a 1,1 Go ; l'accumulation doublee preserve la
+    # taille de lot effective de 16.
+    taille_lot: int = 1
+    accumulation: int = 16
+    taille_lot_eval: int = 1
+    accumulation_evaluation: int = 1
     experience_mlflow: str = "triage-dpo"
     modules_cibles: tuple[str, ...] = field(default=MODULES_LORA)

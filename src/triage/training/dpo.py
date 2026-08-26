@@ -7,6 +7,14 @@ ainsi ~3,4 Go de VRAM, ce qui est determinant sur une carte de 10 Go.
 
 from __future__ import annotations
 
+import os
+
+# Les sequences du jeu de preferences ont des longueurs tres variables, ce qui
+# fragmente le tas CUDA : l'entrainement echoue avec plus d'un gigaoctet
+# reserve mais inutilisable. Les segments extensibles reutilisent ces blocs.
+# A definir avant toute initialisation du contexte CUDA, donc des l'import.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import json
 from math import ceil
 from pathlib import Path
@@ -32,7 +40,8 @@ def _config_entrainement(config: ConfigDPO, nb_exemples: int, pas_max: int | Non
         num_train_epochs=config.epochs,
         max_steps=pas_max or -1,
         per_device_train_batch_size=config.taille_lot,
-        per_device_eval_batch_size=config.taille_lot,
+        per_device_eval_batch_size=config.taille_lot_eval,
+        eval_accumulation_steps=config.accumulation_evaluation,
         gradient_accumulation_steps=config.accumulation,
         learning_rate=config.taux_apprentissage,
         lr_scheduler_type=config.planificateur,
