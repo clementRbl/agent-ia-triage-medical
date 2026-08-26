@@ -26,7 +26,11 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        run: uv sync --group dev
+        # Le groupe `train` est necessaire ici : sans torch ni transformers, le
+        # verificateur de types ne resout pas les imports de src/triage/training
+        # et ce module echapperait au controle. Le cache uv evite de retelecharger
+        # la pile a chaque execution.
+        run: uv sync --group dev --group train
 
       - name: Lint
         run: uv run ruff check --output-format=github .
