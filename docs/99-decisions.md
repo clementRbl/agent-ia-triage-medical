@@ -29,6 +29,12 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-08-26 | Réponses `rejected` de sous-triage **cohérentes avec elles-mêmes** | Une réponse qui annonce un niveau bas tout en listant les critères de gravité serait trop facile à écarter pour apporter quoi que ce soit à l'alignement |
 | 2026-08-26 | Parquet versionné, JSONL régénérable | Le parquet est le format natif HF Datasets et pèse 8 Mo contre 22 Mo pour le JSONL |
 
+| 2026-08-26 | Suivi d'expériences : **MLflow en local** (SQLite) | Le projet repose sur un discours de confidentialité ; envoyer les logs chez un tiers serait incohérent. MLflow 3 ayant déprécié le stockage fichier, le backend est `sqlite:///mlflow.db` |
+| 2026-08-26 | Vérificateur de types : **ty** | Cohérent avec ruff, rapide ; ajouté comme étape bloquante de la CI |
+| 2026-08-26 | `max_length = 1024` | Mesuré : p99 à 988 tokens, 0,66 % d'exemples tronqués ; 1 536 ne récupérerait que 0,64 % de plus pour 50 % d'activations en sus |
+| 2026-08-26 | Lot de 2 × accumulation 8 | Le lot de 4 tient en VRAM (6,26 Go contre 5,99) mais ne change pas le débit : l'entraînement est limité par le calcul |
+| 2026-08-26 | Accès par dictionnaire plutôt que `itertuples` | Les attributs d'un namedtuple pandas sont construits à l'exécution, donc invérifiables statiquement |
+
 ## À trancher
 
 | Sujet | Options | Statut |
@@ -36,4 +42,4 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | Hébergement de l'endpoint | RunPod / Scaleway / HF Endpoints / autre | ⏳ à trancher avant S4 |
 | ~~Volume du jeu DPO~~ | 2 667 paires produites | ✅ tranché |
 | Hébergement du dataset | HF Hub (public/privé) / repo git + LFS | ⏳ |
-| Vérificateur de types | `ty` (Astral) / `mypy` | ⏳ job CI à ajouter une fois choisi |
+

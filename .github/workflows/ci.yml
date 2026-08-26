@@ -14,7 +14,7 @@ env:
 
 jobs:
   qualite:
-    name: Lint et format
+    name: Lint, format et types
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +33,9 @@ jobs:
 
       - name: Format
         run: uv run ruff format --check .
+
+      - name: Types
+        run: uv run ty check
 
   tests:
     name: Tests

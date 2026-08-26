@@ -18,10 +18,21 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff>=0.9",
+    "ty>=0.0.1a1",
     "pytest>=8.3",
     # Exploration : le notebook importe src/, il ne duplique aucune logique.
     "jupyterlab>=4.3",
     "matplotlib>=3.9",
+]
+# Entrainement : isole du groupe par defaut pour que l'installation des
+# donnees et de la CI reste legere (torch pese a lui seul ~2,5 Go).
+train = [
+    "torch>=2.5",
+    "transformers>=4.51",
+    "trl>=0.14",
+    "peft>=0.14",
+    "accelerate>=1.3",
+    "mlflow>=2.20",
 ]
 
 [build-system]

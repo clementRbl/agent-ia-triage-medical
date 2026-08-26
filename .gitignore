@@ -31,6 +31,8 @@ checkpoints/
 *.gguf
 wandb/
 mlruns/
+mlflow.db
+mlartifacts/
 
 # Divers
 .ipynb_checkpoints/

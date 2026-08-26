@@ -1,0 +1,68 @@
+{
+  "etape": "entrainement_sft",
+  "entrees": [
+    "data/processed/sft.parquet"
+  ],
+  "sorties": [
+    "/tmp/claude-1000/smoke_sft/adaptateur/adapter_model.safetensors"
+  ],
+  "empreintes": {
+    "data/processed/sft.parquet": "987337580ba45388b5d8ba071cd9026202c7c3853a2ae24e5b9988423e408068",
+    "/tmp/claude-1000/smoke_sft/adaptateur/adapter_model.safetensors": "b0fc0116599383c809e225a96f7ad447fbd3bf11cc7e205e0c10a5de98c3c23c"
+  },
+  "nb_lignes": {},
+  "parametres": {
+    "modele": "Qwen/Qwen3-1.7B-Base",
+    "sortie": "/tmp/claude-1000/smoke_sft",
+    "rang": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "modules_cibles": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "epochs": 2.0,
+    "taux_apprentissage": 0.0002,
+    "planificateur": "cosine",
+    "part_echauffement": 0.03,
+    "decroissance_poids": 0.01,
+    "taille_lot": 2,
+    "accumulation": 8,
+    "longueur_max": 1024,
+    "bf16": true,
+    "checkpoint_gradient": true,
+    "pas_evaluation": 2,
+    "pas_journalisation": 1,
+    "checkpoints_conserves": 3,
+    "graine": 42,
+    "experience_mlflow": "triage-sft",
+    "nom_run": "smoke"
+  },
+  "statistiques": {
+    "train_train_runtime": 14.7731,
+    "train_train_samples_per_second": 4.332,
+    "train_train_steps_per_second": 0.271,
+    "train_total_flos": 145572191870976.0,
+    "train_train_loss": 2.9768381118774414,
+    "train_epoch": 1.0,
+    "eval_loss": 2.9337158203125,
+    "eval_runtime": 0.7697,
+    "eval_samples_per_second": 20.789,
+    "eval_steps_per_second": 10.394,
+    "eval_entropy": 2.715158611536026,
+    "eval_num_tokens": 13677.0,
+    "eval_mean_token_accuracy": 0.4953586272895336,
+    "epoch": 1.0,
+    "parametres_total": 1738007552,
+    "parametres_entrainables": 17432576,
+    "part_entrainable_pct": 1.003,
+    "vram_max_go": 5.81
+  },
+  "horodatage": "2026-08-26T15:16:50.952761+00:00",
+  "revision_code": "47539c3"
+}

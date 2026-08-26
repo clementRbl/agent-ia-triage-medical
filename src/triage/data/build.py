@@ -91,24 +91,27 @@ def bloc_a_raisonnement_clinique(nombre: int) -> list[Enregistrement]:
     # occupe une part disproportionnee du bloc.
     donnees = donnees.groupby("clinical_case", group_keys=False).head(3).head(nombre)
 
+    # `to_dict` plutot que `itertuples` : les attributs d'un namedtuple pandas
+    # sont construits a l'execution, donc invisibles pour le verificateur de
+    # types. L'acces par cle est verifiable et le cout est negligeable ici.
     return [
         Enregistrement(
-            id=f"mediqal_oeq_{ligne.id}",
+            id=f"mediqal_oeq_{ligne['id']}",
             langue=Langue.FR,
             instruction=(
-                f"Cas clinique :\n{ligne.clinical_case.strip()}\n\n"
-                f"Question : {ligne.question.strip()}"
+                f"Cas clinique :\n{ligne['clinical_case'].strip()}\n\n"
+                f"Question : {ligne['question'].strip()}"
             ),
-            reponse=ligne.answer.strip(),
+            reponse=ligne["answer"].strip(),
             bloc=Bloc.RAISONNEMENT_CLINIQUE,
             source="MediQAl/oeq",
-            source_id=str(ligne.id),
+            source_id=str(ligne["id"]),
             licence=LICENCE_MEDIQAL,
             niveau_confiance=1.0,
             transformations=["mise_en_forme_instruction"],
-            groupe=hashlib.sha256(ligne.clinical_case.encode()).hexdigest()[:16],
+            groupe=hashlib.sha256(ligne["clinical_case"].encode()).hexdigest()[:16],
         )
-        for ligne in donnees.itertuples()
+        for ligne in donnees.to_dict(orient="records")
     ]
 
 
@@ -131,39 +134,39 @@ def bloc_b_connaissance_medicale(nombre: int) -> list[Enregistrement]:
     donnees = donnees.head(nombre)
 
     enregistrements = []
-    for ligne in donnees.itertuples():
+    for ligne in donnees.to_dict(orient="records"):
         propositions = {
-            lettre.upper(): getattr(ligne, f"answer_{lettre}")
+            lettre.upper(): ligne[f"answer_{lettre}"]
             for lettre in _LETTRES
-            if getattr(ligne, f"answer_{lettre}", None)
+            if ligne.get(f"answer_{lettre}")
         }
-        correctes = [c for c in str(ligne.correct_answers).upper() if c in propositions]
+        correctes = [c for c in str(ligne["correct_answers"]).upper() if c in propositions]
         if not correctes:
             continue
 
-        cas = (ligne.clinical_case or "").strip()
+        cas = (ligne["clinical_case"] or "").strip()
         entete = f"Cas clinique :\n{cas}\n\n" if cas else ""
         liste = "\n".join(f"{lettre}. {texte}" for lettre, texte in propositions.items())
         detail = "\n".join(f"{lettre}. {propositions[lettre]}" for lettre in correctes)
 
         enregistrements.append(
             Enregistrement(
-                id=f"mediqal_{ligne.config}_{ligne.id}",
+                id=f"mediqal_{ligne['config']}_{ligne['id']}",
                 langue=Langue.FR,
                 instruction=(
-                    f"{entete}Question : {ligne.question.strip()}\n\n{liste}\n\n"
+                    f"{entete}Question : {ligne['question'].strip()}\n\n{liste}\n\n"
                     "Indiquez la ou les propositions exactes."
                 ),
                 reponse=f"Proposition(s) exacte(s) : {', '.join(correctes)}.\n\n{detail}",
                 bloc=Bloc.CONNAISSANCE_MEDICALE,
-                source=f"MediQAl/{ligne.config}",
-                source_id=str(ligne.id),
+                source=f"MediQAl/{ligne['config']}",
+                source_id=str(ligne["id"]),
                 licence=LICENCE_MEDIQAL,
                 # Le corpus ne fournit pas de justification : la reponse se
                 # limite a l'enonce des propositions exactes.
                 niveau_confiance=0.9,
                 transformations=["qcm_vers_instruction"],
-                groupe=hashlib.sha256((cas or str(ligne.question)).encode()).hexdigest()[:16],
+                groupe=hashlib.sha256((cas or str(ligne["question"])).encode()).hexdigest()[:16],
             )
         )
     return enregistrements
@@ -258,7 +261,10 @@ def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
 
     paires = []
     for enregistrement in cas:
-        minore = minoration.get(enregistrement.niveau_priorite)
+        niveau = enregistrement.niveau_priorite
+        if niveau is None:  # enregistrement hors bloc de triage
+            continue
+        minore = minoration.get(niveau)
         if minore is None:  # un cas deja differe ne peut pas etre sous-trie
             continue
         rejetee = rediger_reponse(
@@ -276,7 +282,7 @@ def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
                 licence="construit (règles explicites)",
                 type_preference="sous_triage",
                 motif_rejet=(
-                    f"sous-triage : {enregistrement.niveau_priorite.value} minoré en "
+                    f"sous-triage : {niveau.value} minoré en "
                     f"{minore.value}, critères de gravité non relevés"
                 ),
                 groupe=enregistrement.groupe,
@@ -414,6 +420,7 @@ def exporter_jsonl(dossier: Path = TRAITE) -> dict[str, Path]:
 
             with cible.open("w", encoding="utf-8") as flux:
                 for ligne in partie.to_dict(orient="records"):
+                    charge: dict[str, Any]
                     if jeu == "sft":
                         charge = {
                             "messages": [
