@@ -14,7 +14,7 @@ env:
 
 jobs:
   qualite:
-    name: Lint et format
+    name: Lint, format et types
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,13 +26,20 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        run: uv sync --group dev
+        # Le groupe `train` est necessaire ici : sans torch ni transformers, le
+        # verificateur de types ne resout pas les imports de src/triage/training
+        # et ce module echapperait au controle. Le cache uv evite de retelecharger
+        # la pile a chaque execution.
+        run: uv sync --group dev --group train
 
       - name: Lint
         run: uv run ruff check --output-format=github .
 
       - name: Format
         run: uv run ruff format --check .
+
+      - name: Types
+        run: uv run ty check
 
   tests:
     name: Tests

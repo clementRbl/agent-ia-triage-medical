@@ -1,0 +1,68 @@
+{
+  "etape": "entrainement_sft",
+  "entrees": [
+    "data/processed/sft.parquet"
+  ],
+  "sorties": [
+    "outputs/sft/adaptateur/adapter_model.safetensors"
+  ],
+  "empreintes": {
+    "data/processed/sft.parquet": "987337580ba45388b5d8ba071cd9026202c7c3853a2ae24e5b9988423e408068",
+    "outputs/sft/adaptateur/adapter_model.safetensors": "cc400af5a8964be722bd12b79bfc7f4667630dd42ce4522bbb24258fe96521e6"
+  },
+  "nb_lignes": {},
+  "parametres": {
+    "modele": "Qwen/Qwen3-1.7B-Base",
+    "sortie": "outputs/sft",
+    "rang": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "modules_cibles": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "epochs": 2.0,
+    "taux_apprentissage": 0.0002,
+    "planificateur": "cosine",
+    "part_echauffement": 0.03,
+    "decroissance_poids": 0.01,
+    "taille_lot": 2,
+    "accumulation": 8,
+    "longueur_max": 1024,
+    "bf16": true,
+    "checkpoint_gradient": true,
+    "pas_evaluation": 50,
+    "pas_journalisation": 10,
+    "checkpoints_conserves": 3,
+    "graine": 42,
+    "experience_mlflow": "triage-sft",
+    "nom_run": "sft-lora-r16-e2"
+  },
+  "statistiques": {
+    "train_train_runtime": 2494.937,
+    "train_train_samples_per_second": 3.195,
+    "train_train_steps_per_second": 0.2,
+    "train_total_flos": 3.434490099154944e+16,
+    "train_train_loss": 1.3526142177581788,
+    "train_epoch": 2.0,
+    "eval_loss": 1.3575716018676758,
+    "eval_runtime": 37.0285,
+    "eval_samples_per_second": 13.179,
+    "eval_steps_per_second": 6.59,
+    "eval_entropy": 1.2572001425213502,
+    "eval_num_tokens": 3106220.0,
+    "eval_mean_token_accuracy": 0.6947419959746424,
+    "epoch": 2.0,
+    "parametres_total": 1738007552,
+    "parametres_entrainables": 17432576,
+    "part_entrainable_pct": 1.003,
+    "vram_max_go": 5.99
+  },
+  "horodatage": "2026-08-26T16:01:06.902008+00:00",
+  "revision_code": "8fc78e9"
+}

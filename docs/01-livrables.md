@@ -60,9 +60,18 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 
 ## Checklist de rendu
 
-- [ ] L1 — dataset versionné (dépôt HF ou repo git) + carte de dataset documentée
-- [ ] L2 — poids LoRA SFT + poids DPO + métriques + hyperparamètres/seed
+- [x] **L1** — dataset versionné en parquet + [carte documentée](../data/processed/README.md)
+- [x] **L2** — adaptateurs LoRA SFT et DPO, métriques, hyperparamètres et graine
+      consignés ; reste à choisir le mode de publication des poids
 - [ ] L3 — URL de l'endpoint accessible + doc d'API
-- [ ] L4 — workflows `.github/workflows/` verts
+- [x] **L4** — workflows `.github/workflows/` verts (lint, format, types, tests,
+      intégrité des données) ; reste à ajouter le déploiement
 - [ ] L5 — rapport PDF ≤ 20 pages
 - [ ] Archive zip nommée selon la convention
+
+### Points ouverts sur les livrables
+
+| Sujet | Décision attendue |
+|---|---|
+| Hébergement de l'endpoint (L3) | RunPod / Scaleway / autre |
+| Publication des poids (L2) | Hugging Face Hub ou pièce jointe — 134 Mo au total, trop pour un dépôt git ordinaire |

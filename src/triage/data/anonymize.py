@@ -251,9 +251,12 @@ class Anonymiseur:
         for r in resultats:
             compte[r.entity_type] = compte.get(r.entity_type, 0) + 1
 
+        # Presidio declare deux classes `RecognizerResult` distinctes mais
+        # structurellement identiques, une par moteur. Le passage de l'une a
+        # l'autre est l'usage prevu par la bibliotheque.
         sortie = self._anonymizer.anonymize(
             text=texte,
-            analyzer_results=resultats,
+            analyzer_results=resultats,  # ty: ignore[invalid-argument-type]
             operators={
                 entite: OperatorConfig("replace", {"new_value": marqueur})
                 for entite, marqueur in self.operateurs.items()

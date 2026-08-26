@@ -99,7 +99,7 @@ class Enregistrement:
         donnees["constantes"] = {k: v for k, v in constantes.items() if v is not None}
         return donnees
 
-    def en_exemple_sft(self) -> dict[str, str]:
+    def en_exemple_sft(self) -> dict[str, list[dict[str, str]]]:
         """Format conversationnel attendu par TRL (SFTTrainer)."""
         return {
             "messages": [

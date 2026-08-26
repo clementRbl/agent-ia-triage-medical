@@ -1,0 +1,37 @@
+{
+  "etape": "export_jsonl",
+  "entrees": [
+    "data/processed/sft.parquet",
+    "data/processed/dpo.parquet"
+  ],
+  "sorties": [
+    "data/processed/jsonl/sft_test.jsonl",
+    "data/processed/jsonl/sft_train.jsonl",
+    "data/processed/jsonl/sft_validation.jsonl",
+    "data/processed/jsonl/dpo_test.jsonl",
+    "data/processed/jsonl/dpo_train.jsonl",
+    "data/processed/jsonl/dpo_validation.jsonl"
+  ],
+  "empreintes": {
+    "data/processed/sft.parquet": "987337580ba45388b5d8ba071cd9026202c7c3853a2ae24e5b9988423e408068",
+    "data/processed/jsonl/sft_test.jsonl": "8b662f52df992b769978069c1b3381d99aa78f95475bf52148da5099afcd8ae9",
+    "data/processed/jsonl/sft_train.jsonl": "46047ec9b7738c5604106b698fa83d0d89b65e98cbde74a08116050d99fb1856",
+    "data/processed/jsonl/sft_validation.jsonl": "503e3102997490340012727e0e3e4285484b23b34afcea697f485e9c09842f55",
+    "data/processed/dpo.parquet": "8e003b7aa2bf92a12ff1bc2d67695636c48108cf8c111988715eb3a35633362c",
+    "data/processed/jsonl/dpo_test.jsonl": "d6aea0e60aa391badbf0ba1992ae789e3b8e504e242a38a0a5d265508890a931",
+    "data/processed/jsonl/dpo_train.jsonl": "188f15c836a6f4d3bc0e693c4ddd41aa0c40c69ab87338a2c6a05c36d273e78d",
+    "data/processed/jsonl/dpo_validation.jsonl": "a705ae557fc1b53a275ceb03de65f3e8e5290aafc84867805619f9cd58009b71"
+  },
+  "nb_lignes": {
+    "data/processed/jsonl/sft_test.jsonl": 526,
+    "data/processed/jsonl/sft_train.jsonl": 3986,
+    "data/processed/jsonl/sft_validation.jsonl": 488,
+    "data/processed/jsonl/dpo_test.jsonl": 304,
+    "data/processed/jsonl/dpo_train.jsonl": 2394,
+    "data/processed/jsonl/dpo_validation.jsonl": 302
+  },
+  "parametres": {},
+  "statistiques": {},
+  "horodatage": "2026-08-26T16:52:19.965749+00:00",
+  "revision_code": "1789459"
+}

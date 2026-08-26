@@ -1,0 +1,76 @@
+{
+  "etape": "entrainement_dpo",
+  "entrees": [
+    "data/processed/dpo.parquet"
+  ],
+  "sorties": [
+    "outputs/dpo/adaptateur/adapter_model.safetensors"
+  ],
+  "empreintes": {
+    "data/processed/dpo.parquet": "3cd4828ebcdc75a3b272fbb7b2c60158d1446c728d24fbc9ef8a3cde29bb9bf7",
+    "outputs/dpo/adaptateur/adapter_model.safetensors": "f62f61ebdadea0a8c86357bd7f80667d2615b175385f06d6e5ccd8e65a961e8a"
+  },
+  "nb_lignes": {},
+  "parametres": {
+    "modele": "Qwen/Qwen3-1.7B-Base",
+    "sortie": "outputs/dpo",
+    "rang": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "modules_cibles": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "epochs": 1.0,
+    "taux_apprentissage": 5e-06,
+    "planificateur": "cosine",
+    "part_echauffement": 0.03,
+    "decroissance_poids": 0.01,
+    "taille_lot": 1,
+    "taille_lot_eval": 1,
+    "accumulation": 16,
+    "longueur_max": 1024,
+    "bf16": true,
+    "checkpoint_gradient": true,
+    "pas_evaluation": 50,
+    "pas_journalisation": 10,
+    "checkpoints_conserves": 3,
+    "graine": 42,
+    "experience_mlflow": "triage-dpo",
+    "nom_run": "dpo-beta0.1-e1",
+    "adaptateur_sft": "outputs/sft/adaptateur",
+    "beta": 0.1,
+    "accumulation_evaluation": 1
+  },
+  "statistiques": {
+    "train_train_runtime": 1607.0231,
+    "train_train_samples_per_second": 1.327,
+    "train_train_steps_per_second": 0.083,
+    "train_total_flos": 1.92948696367104e+16,
+    "train_train_loss": 0.4385254712247137,
+    "train_epoch": 1.0,
+    "eval_loss": 0.381413072347641,
+    "eval_runtime": 100.3515,
+    "eval_samples_per_second": 2.72,
+    "eval_steps_per_second": 2.72,
+    "eval_entropy": 0.7605390411156875,
+    "eval_num_tokens": 2011716.0,
+    "eval_logits/chosen": 2.7763055616624204,
+    "eval_logits/rejected": 2.633021923850054,
+    "eval_mean_token_accuracy": 0.782899538894276,
+    "eval_rewards/chosen": 0.01556841129370566,
+    "eval_rewards/rejected": -1.5456880489330151,
+    "eval_rewards/accuracies": 0.8717948717948718,
+    "eval_rewards/margins": 1.5612564645298235,
+    "eval_logps/chosen": -346.64817589281245,
+    "eval_logps/rejected": -259.24334262666247,
+    "epoch": 1.0
+  },
+  "horodatage": "2026-08-26T16:42:17.454995+00:00",
+  "revision_code": "1789459"
+}

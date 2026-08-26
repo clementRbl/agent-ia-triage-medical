@@ -28,7 +28,7 @@ import pandas as pd
 from triage.audit import Manifeste
 from triage.data.anonymize import Anonymiseur
 from triage.data.splits import repartir_par_groupe, verifier_absence_fuite
-from triage.data.triage import generer_cas, rediger_reponse
+from triage.data.triage import declencheurs_du_cas, generer_cas, rediger_reponse
 from triage.schema import Bloc, Enregistrement, Langue, NiveauPriorite, PairePreference
 
 BRUT = Path("data/raw")
@@ -91,24 +91,27 @@ def bloc_a_raisonnement_clinique(nombre: int) -> list[Enregistrement]:
     # occupe une part disproportionnee du bloc.
     donnees = donnees.groupby("clinical_case", group_keys=False).head(3).head(nombre)
 
+    # `to_dict` plutot que `itertuples` : les attributs d'un namedtuple pandas
+    # sont construits a l'execution, donc invisibles pour le verificateur de
+    # types. L'acces par cle est verifiable et le cout est negligeable ici.
     return [
         Enregistrement(
-            id=f"mediqal_oeq_{ligne.id}",
+            id=f"mediqal_oeq_{ligne['id']}",
             langue=Langue.FR,
             instruction=(
-                f"Cas clinique :\n{ligne.clinical_case.strip()}\n\n"
-                f"Question : {ligne.question.strip()}"
+                f"Cas clinique :\n{ligne['clinical_case'].strip()}\n\n"
+                f"Question : {ligne['question'].strip()}"
             ),
-            reponse=ligne.answer.strip(),
+            reponse=ligne["answer"].strip(),
             bloc=Bloc.RAISONNEMENT_CLINIQUE,
             source="MediQAl/oeq",
-            source_id=str(ligne.id),
+            source_id=str(ligne["id"]),
             licence=LICENCE_MEDIQAL,
             niveau_confiance=1.0,
             transformations=["mise_en_forme_instruction"],
-            groupe=hashlib.sha256(ligne.clinical_case.encode()).hexdigest()[:16],
+            groupe=hashlib.sha256(ligne["clinical_case"].encode()).hexdigest()[:16],
         )
-        for ligne in donnees.itertuples()
+        for ligne in donnees.to_dict(orient="records")
     ]
 
 
@@ -131,39 +134,39 @@ def bloc_b_connaissance_medicale(nombre: int) -> list[Enregistrement]:
     donnees = donnees.head(nombre)
 
     enregistrements = []
-    for ligne in donnees.itertuples():
+    for ligne in donnees.to_dict(orient="records"):
         propositions = {
-            lettre.upper(): getattr(ligne, f"answer_{lettre}")
+            lettre.upper(): ligne[f"answer_{lettre}"]
             for lettre in _LETTRES
-            if getattr(ligne, f"answer_{lettre}", None)
+            if ligne.get(f"answer_{lettre}")
         }
-        correctes = [c for c in str(ligne.correct_answers).upper() if c in propositions]
+        correctes = [c for c in str(ligne["correct_answers"]).upper() if c in propositions]
         if not correctes:
             continue
 
-        cas = (ligne.clinical_case or "").strip()
+        cas = (ligne["clinical_case"] or "").strip()
         entete = f"Cas clinique :\n{cas}\n\n" if cas else ""
         liste = "\n".join(f"{lettre}. {texte}" for lettre, texte in propositions.items())
         detail = "\n".join(f"{lettre}. {propositions[lettre]}" for lettre in correctes)
 
         enregistrements.append(
             Enregistrement(
-                id=f"mediqal_{ligne.config}_{ligne.id}",
+                id=f"mediqal_{ligne['config']}_{ligne['id']}",
                 langue=Langue.FR,
                 instruction=(
-                    f"{entete}Question : {ligne.question.strip()}\n\n{liste}\n\n"
+                    f"{entete}Question : {ligne['question'].strip()}\n\n{liste}\n\n"
                     "Indiquez la ou les propositions exactes."
                 ),
                 reponse=f"Proposition(s) exacte(s) : {', '.join(correctes)}.\n\n{detail}",
                 bloc=Bloc.CONNAISSANCE_MEDICALE,
-                source=f"MediQAl/{ligne.config}",
-                source_id=str(ligne.id),
+                source=f"MediQAl/{ligne['config']}",
+                source_id=str(ligne["id"]),
                 licence=LICENCE_MEDIQAL,
                 # Le corpus ne fournit pas de justification : la reponse se
                 # limite a l'enonce des propositions exactes.
                 niveau_confiance=0.9,
                 transformations=["qcm_vers_instruction"],
-                groupe=hashlib.sha256((cas or str(ligne.question)).encode()).hexdigest()[:16],
+                groupe=hashlib.sha256((cas or str(ligne["question"])).encode()).hexdigest()[:16],
             )
         )
     return enregistrements
@@ -242,28 +245,75 @@ def construire_dpo(
 
 
 def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
-    """Derive des preferences des cas de triage, en ciblant le sous-triage.
+    """Derive des preferences des cas de triage, dans les deux sens d'erreur.
 
-    La reponse rejetee ne se contente pas de changer l'etiquette : elle est
-    **coherente avec elle-meme**, ne mentionne aucun critere de gravite et
-    minore la priorite. C'est la forme reelle du sous-triage -- les criteres
-    n'ont pas ete releves -- et donc un contre-exemple utile. Une reponse qui
-    annoncerait un niveau bas tout en listant les criteres de gravite serait
-    trop facile a ecarter pour apporter quoi que ce soit a l'alignement.
+    Une premiere version ne rejetait que des reponses **minorant** la priorite,
+    en visant le sous-triage. Le signal etait alors unidirectionnel : sous une
+    telle distribution, la politique optimale est d'annoncer toujours le niveau
+    le plus haut. Le modele l'a appris et a sur-trie 57 % des cas.
+
+    Chaque niveau reel produit donc l'erreur ou les erreurs qui lui sont
+    possibles :
+
+    - une urgence maximale ne peut etre que minoree ;
+    - une prise en charge differee ne peut etre que majoree ;
+    - un cas modere alterne entre les deux, un index sur deux.
+
+    Les deux contre-exemples imitent des erreurs reelles plutot que des
+    reponses absurdes. Le sous-triage annonce un niveau bas **et** declare des
+    constantes normales : les criteres n'ont pas ete releves. Le sur-triage
+    cite les criteres reellement remplis mais en tire une conclusion trop
+    grave : le seuil a ete mal lu. Une reponse qui se contredirait ouvertement
+    serait trop facile a ecarter pour apporter quoi que ce soit.
+
+    L'asymetrie de gravite entre les deux erreurs ne se traite pas en
+    desequilibrant les preferences -- c'est precisement ce qui a echoue -- mais
+    dans les metriques d'evaluation et les seuils d'acceptation.
     """
-    minoration = {
+    inferieur = {
         NiveauPriorite.MAXIMALE: NiveauPriorite.MODEREE,
         NiveauPriorite.MODEREE: NiveauPriorite.DIFFEREE,
     }
+    superieur = {
+        NiveauPriorite.DIFFEREE: NiveauPriorite.MODEREE,
+        NiveauPriorite.MODEREE: NiveauPriorite.MAXIMALE,
+    }
 
     paires = []
-    for enregistrement in cas:
-        minore = minoration.get(enregistrement.niveau_priorite)
-        if minore is None:  # un cas deja differe ne peut pas etre sous-trie
+    for index, enregistrement in enumerate(cas):
+        niveau = enregistrement.niveau_priorite
+        if niveau is None:  # enregistrement hors bloc de triage
             continue
-        rejetee = rediger_reponse(
-            minore, [], enregistrement.constantes, enregistrement.langue.value
-        )
+
+        if niveau is NiveauPriorite.MAXIMALE:
+            sens = "sous_triage"
+        elif niveau is NiveauPriorite.DIFFEREE:
+            sens = "sur_triage"
+        else:
+            sens = "sous_triage" if index % 2 else "sur_triage"
+
+        if sens == "sous_triage":
+            errone = inferieur[niveau]
+            # Criteres non releves : la reponse declare un tableau normal.
+            rejetee = rediger_reponse(
+                errone, [], enregistrement.constantes, enregistrement.langue.value
+            )
+            motif = f"sous-triage : {niveau.value} minoré en {errone.value}, critères non relevés"
+        else:
+            errone = superieur[niveau]
+            declencheurs = declencheurs_du_cas(enregistrement)
+            rejetee = rediger_reponse(
+                errone, declencheurs, enregistrement.constantes, enregistrement.langue.value
+            )
+            # Deux formes de sur-triage selon ce que le tableau contient :
+            # un seuil mal lu quand des criteres existent, une majoration sans
+            # aucun critere objectivable sinon.
+            cause = "seuil mal lu" if declencheurs else "aucun critère objectivé"
+            motif = f"sur-triage : {niveau.value} majoré en {errone.value}, {cause}"
+
+        if rejetee.strip() == enregistrement.reponse.strip():
+            continue
+
         paires.append(
             PairePreference(
                 id=f"dpo_{enregistrement.id}",
@@ -274,11 +324,8 @@ def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
                 source="triage_regles",
                 source_id=enregistrement.source_id,
                 licence="construit (règles explicites)",
-                type_preference="sous_triage",
-                motif_rejet=(
-                    f"sous-triage : {enregistrement.niveau_priorite.value} minoré en "
-                    f"{minore.value}, critères de gravité non relevés"
-                ),
+                type_preference=sens,
+                motif_rejet=motif,
                 groupe=enregistrement.groupe,
             )
         )
@@ -414,6 +461,7 @@ def exporter_jsonl(dossier: Path = TRAITE) -> dict[str, Path]:
 
             with cible.open("w", encoding="utf-8") as flux:
                 for ligne in partie.to_dict(orient="records"):
+                    charge: dict[str, Any]
                     if jeu == "sft":
                         charge = {
                             "messages": [

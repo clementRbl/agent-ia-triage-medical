@@ -1,0 +1,40 @@
+{
+  "etape": "construction_dpo",
+  "entrees": [],
+  "sorties": [
+    "data/processed/dpo.parquet"
+  ],
+  "empreintes": {
+    "data/processed/dpo.parquet": "8e003b7aa2bf92a12ff1bc2d67695636c48108cf8c111988715eb3a35633362c"
+  },
+  "nb_lignes": {
+    "data/processed/dpo.parquet": 3000
+  },
+  "parametres": {
+    "nombre_ultramedical": 2000,
+    "nombre_triage": 1000,
+    "labels_exclus": [
+      "length"
+    ],
+    "graine": 42
+  },
+  "statistiques": {
+    "par_source": {
+      "UltraMedical": 2000,
+      "triage_regles": 1000
+    },
+    "par_type_preference": {
+      "hard": 1323,
+      "easy": 677,
+      "sous_triage": 501,
+      "sur_triage": 499
+    },
+    "par_split": {
+      "train": 2394,
+      "test": 304,
+      "validation": 302
+    }
+  },
+  "horodatage": "2026-08-26T16:52:19.959409+00:00",
+  "revision_code": "1789459"
+}

@@ -4,12 +4,14 @@ Le bareme etant la partie la plus sensible du jeu de donnees -- un seuil faux
 produit des milliers d'exemples faux -- chaque critere est teste isolement.
 """
 
+from dataclasses import replace
+
 import pytest
 
 from triage.data.triage import PRESENTATIONS, evaluer_priorite, generer_cas
 from triage.schema import Constantes, NiveauPriorite
 
-NORMALES = dict(
+NORMALES = Constantes(
     frequence_cardiaque=78,
     pression_systolique=125,
     pression_diastolique=75,
@@ -22,7 +24,8 @@ NORMALES = dict(
 
 
 def constantes(**ecarts) -> Constantes:
-    return Constantes(**{**NORMALES, **ecarts})
+    """Un tableau normal, dont on n'ecarte que la constante testee."""
+    return replace(NORMALES, **ecarts)
 
 
 @pytest.mark.parametrize(

@@ -23,6 +23,7 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [docs/03d-anonymisation-rgpd.md](docs/03d-anonymisation-rgpd.md) | Stratégie de masquage, contrôle qualité mesuré, traçabilité |
 | [data/processed/README.md](data/processed/README.md) | Carte du jeu de données produit (schéma, volumes, licences, limites) |
 | [docs/04-etape-2-sft-dpo.md](docs/04-etape-2-sft-dpo.md) | SFT + LoRA, alignement DPO, métriques |
+| [docs/04b-resultats-entrainement.md](docs/04b-resultats-entrainement.md) | Résultats mesurés : SFT, évaluation clinique, investigation DPO |
 | [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Docker, FastAPI, vLLM, CI/CD, go/no-go |
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |
@@ -30,7 +31,7 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 ## Jeu de données
 
 `data/processed/` contient le livrable 1 : **5 000 paires SFT** bilingues et
-**2 667 paires DPO**, au format parquet (natif Hugging Face Datasets).
+**3 000 paires DPO**, au format parquet (natif Hugging Face Datasets).
 
 ```bash
 # régénérer le JSONL
@@ -65,8 +66,41 @@ Trois jobs GitHub Actions sur chaque PR ([.github/workflows/ci.yml](.github/work
 | Tests | suite unitaire |
 | Intégrité du jeu de données | empreintes des manifestes, seuil de PII résiduelle, absence de fuite entre les jeux |
 
-## État
+## Modèle
 
-Semaine 1 en cours : ingestion des corpus et chaîne d'anonymisation
-opérationnelles et testées. Voir [docs/99-decisions.md](docs/99-decisions.md)
-pour les décisions techniques.
+`Qwen3-1.7B-Base` spécialisé par **SFT + LoRA** puis aligné par **DPO**.
+Adaptateurs de 67 Mo chacun, entraînés sur une RTX 3080 de 10 Go.
+
+| Sur 99 cas de triage jamais vus | Base | SFT | **SFT + DPO** |
+|---|---|---|---|
+| Exactitude | 0 % | 91,92 % | **92,93 %** |
+| Sur-triage | — | 4,04 % | **3,03 %** |
+| Urgences vitales identifiées | 0/31 | 31/31 | **31/31** |
+
+Résultats détaillés, échecs compris :
+[docs/04b-resultats-entrainement.md](docs/04b-resultats-entrainement.md).
+
+```bash
+# entraînement supervisé puis alignement
+uv run python -c "from triage.training.sft import entrainer_sft; entrainer_sft()"
+uv run python -c "from triage.training.dpo import entrainer_dpo; entrainer_dpo()"
+
+# évaluation clinique : base, SFT, DPO sur les mêmes cas
+uv run python scripts/evaluer_triage.py --dpo
+uv run python scripts/evaluer_triage.py --dpo --generalisation
+
+# suivi des runs
+uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
+```
+
+## État d'avancement
+
+| Semaine | Objet | État |
+|---|---|---|
+| 1 | Préparation des données | ✅ 5 000 paires SFT + 3 000 paires DPO, anonymisées |
+| 2 | Fine-tuning supervisé (SFT + LoRA) | ✅ 92,93 % d'exactitude, 0 urgence manquée |
+| 3 | Alignement par préférences (DPO) | ✅ trois runs, ablation concluante |
+| 4 | Déploiement et validation | ⏳ Docker, FastAPI, vLLM, cloud |
+
+Décisions techniques et points ouverts :
+[docs/99-decisions.md](docs/99-decisions.md).

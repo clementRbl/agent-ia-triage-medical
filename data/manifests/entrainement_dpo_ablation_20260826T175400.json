@@ -1,0 +1,77 @@
+{
+  "etape": "entrainement_dpo_ablation",
+  "entrees": [
+    "data/ablation/dpo.parquet"
+  ],
+  "sorties": [
+    "outputs/dpo_ablation/adaptateur/adapter_model.safetensors"
+  ],
+  "empreintes": {
+    "data/ablation/dpo.parquet": "49d809075bb7f60454638db4860c8bc363e99bd807cca6bca08dc953d7934ec3",
+    "outputs/dpo_ablation/adaptateur/adapter_model.safetensors": "7060a3bef64b6a47a0b0c0a4d4a509bf4ff6f9c43cacb66d28443ecab7e4d003"
+  },
+  "nb_lignes": {},
+  "parametres": {
+    "modele": "Qwen/Qwen3-1.7B-Base",
+    "sortie": "outputs/dpo_ablation",
+    "rang": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "modules_cibles": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "epochs": 1.0,
+    "taux_apprentissage": 5e-06,
+    "planificateur": "cosine",
+    "part_echauffement": 0.03,
+    "decroissance_poids": 0.01,
+    "taille_lot": 1,
+    "taille_lot_eval": 1,
+    "accumulation": 16,
+    "longueur_max": 1024,
+    "bf16": true,
+    "checkpoint_gradient": true,
+    "pas_evaluation": 50,
+    "pas_journalisation": 10,
+    "checkpoints_conserves": 3,
+    "graine": 42,
+    "experience_mlflow": "triage-dpo",
+    "nom_run": "dpo-ablation-sans-triage",
+    "dossier_donnees": "data/ablation",
+    "adaptateur_sft": "outputs/sft/adaptateur",
+    "beta": 0.1,
+    "accumulation_evaluation": 1
+  },
+  "statistiques": {
+    "train_train_runtime": 1316.6767,
+    "train_train_samples_per_second": 1.202,
+    "train_train_steps_per_second": 0.075,
+    "train_total_flos": 1.68393707126784e+16,
+    "train_train_loss": 0.5661616566205265,
+    "train_epoch": 1.0,
+    "eval_loss": 0.49933362007141113,
+    "eval_runtime": 82.7413,
+    "eval_samples_per_second": 2.574,
+    "eval_steps_per_second": 2.574,
+    "eval_entropy": 0.8972992368147407,
+    "eval_num_tokens": 1736201.0,
+    "eval_logits/chosen": 4.511127894892223,
+    "eval_logits/rejected": 4.308773664873366,
+    "eval_mean_token_accuracy": 0.7315250786257462,
+    "eval_rewards/chosen": 0.03687463068849289,
+    "eval_rewards/rejected": -0.5599395555275725,
+    "eval_rewards/accuracies": 0.8169014084507042,
+    "eval_rewards/margins": 0.596814184008,
+    "eval_logps/chosen": -437.18481943193177,
+    "eval_logps/rejected": -305.03497006411845,
+    "epoch": 1.0
+  },
+  "horodatage": "2026-08-26T17:54:00.387639+00:00",
+  "revision_code": "7df9dce"
+}

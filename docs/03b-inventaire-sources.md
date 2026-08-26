@@ -56,7 +56,7 @@ de connaissance pure) ; les ~3 900 restantes en ont un.
 
 ### Conséquences directes
 
-1. ✅ **Presidio est réellement nécessaire** : 27 % des cas contiennent une
+1. ✅ **Presidio est réellement nécessaire** : 28 % des cas contiennent une
    civilité et un nom partiel (« Monsieur R. »), 68 % un âge. Le masquage n'est
    pas un exercice de style.
 2. ⚠️ **Les constantes vitales sont quasi absentes** (3 %). Le champ
