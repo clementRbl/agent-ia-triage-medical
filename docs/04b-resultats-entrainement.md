@@ -164,10 +164,91 @@ ton, pertinence d'une explication. L'appliquer à une décision vérifiable revi
 à substituer une préférence relative à une réponse juste, et introduit du bruit
 là où le SFT avait convergé.
 
-### Run 3 — ablation
+### Run 3 — ablation : DPO sans les paires de triage
 
-DPO sur les seules paires UltraMedical, **sans aucune paire de triage**
-(2 000 paires). Objectif : distinguer l'effet des paires de triage de celui des
+DPO sur les seules paires UltraMedical (2 000 paires), **sans aucune paire de
+triage**. Objectif : distinguer l'effet des paires de triage de celui des
 données anglophones.
 
-*(résultats à compléter)*
+Signal visible dès l'entraînement — le modèle s'écarte beaucoup moins du SFT :
+
+| | DPO avec triage | DPO ablation |
+|---|---|---|
+| `rewards/chosen` | −0,279 | **−0,048** |
+| `rewards/margins` | 2,09 | 0,60 |
+
+#### Résultats sur le jeu de test (99 cas)
+
+| | Base | SFT | DPO run 1 | DPO run 2 | **DPO ablation** |
+|---|---|---|---|---|---|
+| Exactitude | 0 % | 91,92 % | 42,42 % | 64,65 % | **92,93 %** |
+| Sous-triage | — | 4,04 % | 0 % | 14,14 % | 4,04 % |
+| Sur-triage | — | 4,04 % | 57,58 % | 21,21 % | **3,03 %** |
+| Urgences identifiées | 0/31 | 31/31 | 31/31 | 13/31 | **31/31** |
+
+**Hypothèse confirmée.** Les paires portant sur la décision de triage étaient la
+cause des deux échecs, et non les données anglophones — la contamination
+linguistique observée au run 2 provenait donc, elle aussi, de la dérive globale
+provoquée par un signal contradictoire.
+
+Débarrassé de ces paires, le DPO améliore légèrement le SFT (+1,01 point,
+sur-triage ramené de 4,04 % à 3,03 %) **sans toucher à la propriété de
+sécurité** : aucune urgence vitale manquée.
+
+## 4. Robustesse du modèle final
+
+Sur les six motifs de recours jamais vus à l'entraînement :
+
+| | SFT | DPO ablation |
+|---|---|---|
+| Exactitude | 87,50 % | 85,83 % |
+| Sous-triage global | 5,83 % | 8,33 % |
+| Sur-triage | 6,67 % | 5,83 % |
+| Urgences minorées | 5/40 | 7/40 |
+
+Le DPO gagne 1,01 point sur le jeu de test et en perd 1,67 sur les motifs
+inédits. Avant d'en conclure quoi que ce soit, il faut mesurer la précision de
+ces chiffres.
+
+### Ces écarts ne sont pas significatifs
+
+| Modèle | Urgences minorées | IC 95 % |
+|---|---|---|
+| SFT | 5/40 = 12,5 % | **[5,5 % – 26,1 %]** |
+| DPO ablation | 7/40 = 17,5 % | **[8,7 % – 32,0 %]** |
+
+Comparaison appariée sur les mêmes 40 cas : **2 paires discordantes**, toutes en
+faveur du SFT, test binomial bilatéral **p ≈ 0,50**. L'écart tient à deux cas et
+n'est pas distinguable du bruit.
+
+### Conséquence pour la décision de déploiement
+
+Avec 40 urgences évaluées, l'intervalle de confiance du taux de sous-triage
+critique s'étend de 5,5 % à 26,1 %. **Aucun seuil d'acceptation clinique ne peut
+être fixé sur une telle imprécision.** Élargir le jeu d'évaluation clinique est
+donc un prérequis au go/no-go, avant toute autre optimisation du modèle.
+
+## 5. Modèle retenu et attribution des gains
+
+Le livrable est le modèle **SFT + DPO (variante ablation)**, conforme au
+cahier des charges. L'attribution des gains doit toutefois être énoncée
+clairement :
+
+- la **capacité de triage vient du SFT** — le modèle de base ne produit aucun
+  niveau exploitable, le SFT atteint 91,92 % sans manquer une urgence ;
+- la **contribution du DPO porte sur la qualité rédactionnelle**, pas sur la
+  décision clinique : son effet sur le triage est positif sur le jeu de test,
+  légèrement négatif hors distribution, et non significatif dans les deux cas.
+
+### Enseignement méthodologique
+
+Le triage possède une **vérité terrain déterministe** : le niveau se déduit de
+règles vérifiables. Le DPO est conçu pour les tâches où la qualité est
+subjective. Lui confier une décision calculable revient à substituer une
+préférence relative à une réponse juste — les runs 1 et 2 en donnent la mesure.
+Appliqué à ce pour quoi il est fait, il apporte un gain net.
+
+Corollaire, valable au-delà de ce projet : **les métriques d'alignement mesurent
+l'alignement, pas la qualité clinique**. Le run 1 affichait 87 % de paires bien
+départagées tout en classant 95 % des prises en charge différées en urgence.
+Seule l'évaluation sur cas réels l'a montré.
