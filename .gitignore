@@ -22,6 +22,9 @@ __pycache__/
 # Données et artefacts lourds
 data/raw/
 data/interim/
+# Le JSONL derive des parquet versionnes : `uv run python -c
+# "from triage.data.build import exporter_jsonl; exporter_jsonl()"`
+data/processed/jsonl/
 outputs/
 checkpoints/
 *.safetensors
@@ -32,3 +35,6 @@ mlruns/
 # Divers
 .ipynb_checkpoints/
 .DS_Store
+
+# Notebooks
+.ipynb_checkpoints/

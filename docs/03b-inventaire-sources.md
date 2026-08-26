@@ -37,11 +37,14 @@ Sur les **1 011 cas cliniques uniques** de `oeq` :
 | Signal | Couverture |
 |---|---|
 | Âge du patient | **68 %** |
-| Civilité (M./Mme/Monsieur/Madame) | **27 %** |
+| Civilité (M./Mme/Monsieur/Madame) | **28 %** |
 | Antécédents (ATCD / « antécédents ») | **24 %** |
-| Constantes vitales structurées (`FC =`, `SpO2 =`…) | **1 %** |
+| Constantes vitales structurées (`FC`, `PA`, `TA`, `FR`, `SpO2`, `SaO2` suivis de `=` ou `:`) | **3 %** |
 
 Longueur médiane : cas 572 caractères, réponse 176 caractères.
+Part des questions relevant de l'urgence (`Emergency Medicine` + `Intensive Care`) : **5,3 %**.
+
+Mesures reproductibles dans [`notebooks/01_exploration_corpus.ipynb`](../notebooks/01_exploration_corpus.ipynb).
 `question_type` : Reasoning 3 125 / Understanding 1 842.
 
 Répartition par spécialité (`oeq`) : Pharmacy 1 544, Pediatric Cardiology 1 225,
@@ -56,7 +59,7 @@ de connaissance pure) ; les ~3 900 restantes en ont un.
 1. ✅ **Presidio est réellement nécessaire** : 27 % des cas contiennent une
    civilité et un nom partiel (« Monsieur R. »), 68 % un âge. Le masquage n'est
    pas un exercice de style.
-2. ⚠️ **Les constantes vitales sont quasi absentes** (1 %). Le champ
+2. ⚠️ **Les constantes vitales sont quasi absentes** (3 %). Le champ
    `constantes` du schéma de métadonnées ne peut donc **pas** être rempli par
    extraction depuis MediQAl seul.
 3. ⚠️ **Le corpus n'est pas un corpus de triage** : pas de label de priorité,

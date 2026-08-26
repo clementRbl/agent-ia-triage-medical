@@ -1,0 +1,27 @@
+{
+  "nb_textes": 1011,
+  "nb_textes_avec_pii": 502,
+  "entites_retirees": {
+    "PERSON": 534,
+    "FR_CIVILITE": 422,
+    "ETABLISSEMENT_SANTE": 226,
+    "FR_DATE_ABSOLUE": 16,
+    "PHONE_NUMBER": 4
+  },
+  "residus": {
+    "PERSON": 2
+  },
+  "taux_residuel": 0.00198,
+  "exemples_residus": [
+    {
+      "entite": "PERSON",
+      "extrait": "(g/L) 1,0\n Sg Leucocytes G/L 6,5\n Sg—Erythrocytes T/L 3.7\n <PATIENT>/L 70\n <PATIENT> g/L 105\n Sg-- Hématocrite % 40\n Pl-- TP % 40\n",
+      "detecte": "PATIENT>/L"
+    },
+    {
+      "entite": "PERSON",
+      "extrait": "t J7 sont les suivants :\n\nJ1\tJ7\nSe CK (UI/L)\t23.400\t82.900\n<PATIENT>/L)\t500\t1.430\nSe LDH (UI/L)\t1.130\t5.270\nPI Créatinine (µmol/L)",
+      "detecte": "PATIENT>/L"
+    }
+  ]
+}
