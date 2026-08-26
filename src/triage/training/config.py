@@ -73,10 +73,20 @@ class ConfigSFT:
     dossier_donnees: Path = Path("data/processed")
 
     def en_dict(self) -> dict[str, Any]:
-        donnees = asdict(self)
-        donnees["sortie"] = str(donnees["sortie"])
-        donnees["modules_cibles"] = list(donnees["modules_cibles"])
-        return donnees
+        """Forme serialisable, pour le manifeste d'audit et MLflow.
+
+        La conversion des chemins est generique : nommer les champs un a un
+        laissait passer tout nouveau `Path`, et le manifeste echouait apres
+        l'entrainement -- au pire moment.
+        """
+        return {
+            cle: str(valeur)
+            if isinstance(valeur, Path)
+            else list(valeur)
+            if isinstance(valeur, tuple)
+            else valeur
+            for cle, valeur in asdict(self).items()
+        }
 
     @property
     def lot_effectif(self) -> int:

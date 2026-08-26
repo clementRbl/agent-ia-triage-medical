@@ -21,6 +21,15 @@ from triage.training.inference import (
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dpo", action="store_true", help="évaluer aussi l'adaptateur DPO")
+    parser.add_argument(
+        "--adaptateur-dpo",
+        type=Path,
+        default=Path("outputs/dpo/adaptateur"),
+        help="adaptateur DPO à évaluer (permet de comparer plusieurs variantes)",
+    )
+    parser.add_argument(
+        "--etiquette-dpo", default="dpo", help="nom sous lequel reporter le run DPO"
+    )
     parser.add_argument("--limite", type=int, default=None, help="nombre de cas")
     parser.add_argument("--split", default="test")
     parser.add_argument(
@@ -35,7 +44,7 @@ def main() -> int:
         ("sft", Path("outputs/sft/adaptateur")),
     ]
     if args.dpo:
-        a_evaluer.append(("dpo", Path("outputs/dpo/adaptateur")))
+        a_evaluer.append((args.etiquette_dpo, args.adaptateur_dpo))
 
     resultats = []
     reponses_par_modele = {}
@@ -63,6 +72,8 @@ def main() -> int:
         print(f"  sans niveau      {100 * resultat.taux_sans_niveau:6.2f} %", flush=True)
 
     suffixe = "_generalisation" if args.generalisation else ""
+    if args.etiquette_dpo != "dpo":
+        suffixe += f"_{args.etiquette_dpo}"
     chemin = ecrire_rapport(resultats, Path(f"outputs/evaluation{suffixe}.json"))
     Path(f"outputs/reponses_evaluation{suffixe}.json").write_text(
         json.dumps(reponses_par_modele, ensure_ascii=False, indent=2), encoding="utf-8"
