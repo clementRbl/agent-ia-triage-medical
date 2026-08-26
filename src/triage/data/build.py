@@ -28,7 +28,7 @@ import pandas as pd
 from triage.audit import Manifeste
 from triage.data.anonymize import Anonymiseur
 from triage.data.splits import repartir_par_groupe, verifier_absence_fuite
-from triage.data.triage import generer_cas, rediger_reponse
+from triage.data.triage import declencheurs_du_cas, generer_cas, rediger_reponse
 from triage.schema import Bloc, Enregistrement, Langue, NiveauPriorite, PairePreference
 
 BRUT = Path("data/raw")
@@ -245,31 +245,75 @@ def construire_dpo(
 
 
 def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
-    """Derive des preferences des cas de triage, en ciblant le sous-triage.
+    """Derive des preferences des cas de triage, dans les deux sens d'erreur.
 
-    La reponse rejetee ne se contente pas de changer l'etiquette : elle est
-    **coherente avec elle-meme**, ne mentionne aucun critere de gravite et
-    minore la priorite. C'est la forme reelle du sous-triage -- les criteres
-    n'ont pas ete releves -- et donc un contre-exemple utile. Une reponse qui
-    annoncerait un niveau bas tout en listant les criteres de gravite serait
-    trop facile a ecarter pour apporter quoi que ce soit a l'alignement.
+    Une premiere version ne rejetait que des reponses **minorant** la priorite,
+    en visant le sous-triage. Le signal etait alors unidirectionnel : sous une
+    telle distribution, la politique optimale est d'annoncer toujours le niveau
+    le plus haut. Le modele l'a appris et a sur-trie 57 % des cas.
+
+    Chaque niveau reel produit donc l'erreur ou les erreurs qui lui sont
+    possibles :
+
+    - une urgence maximale ne peut etre que minoree ;
+    - une prise en charge differee ne peut etre que majoree ;
+    - un cas modere alterne entre les deux, un index sur deux.
+
+    Les deux contre-exemples imitent des erreurs reelles plutot que des
+    reponses absurdes. Le sous-triage annonce un niveau bas **et** declare des
+    constantes normales : les criteres n'ont pas ete releves. Le sur-triage
+    cite les criteres reellement remplis mais en tire une conclusion trop
+    grave : le seuil a ete mal lu. Une reponse qui se contredirait ouvertement
+    serait trop facile a ecarter pour apporter quoi que ce soit.
+
+    L'asymetrie de gravite entre les deux erreurs ne se traite pas en
+    desequilibrant les preferences -- c'est precisement ce qui a echoue -- mais
+    dans les metriques d'evaluation et les seuils d'acceptation.
     """
-    minoration = {
+    inferieur = {
         NiveauPriorite.MAXIMALE: NiveauPriorite.MODEREE,
         NiveauPriorite.MODEREE: NiveauPriorite.DIFFEREE,
     }
+    superieur = {
+        NiveauPriorite.DIFFEREE: NiveauPriorite.MODEREE,
+        NiveauPriorite.MODEREE: NiveauPriorite.MAXIMALE,
+    }
 
     paires = []
-    for enregistrement in cas:
+    for index, enregistrement in enumerate(cas):
         niveau = enregistrement.niveau_priorite
         if niveau is None:  # enregistrement hors bloc de triage
             continue
-        minore = minoration.get(niveau)
-        if minore is None:  # un cas deja differe ne peut pas etre sous-trie
+
+        if niveau is NiveauPriorite.MAXIMALE:
+            sens = "sous_triage"
+        elif niveau is NiveauPriorite.DIFFEREE:
+            sens = "sur_triage"
+        else:
+            sens = "sous_triage" if index % 2 else "sur_triage"
+
+        if sens == "sous_triage":
+            errone = inferieur[niveau]
+            # Criteres non releves : la reponse declare un tableau normal.
+            rejetee = rediger_reponse(
+                errone, [], enregistrement.constantes, enregistrement.langue.value
+            )
+            motif = f"sous-triage : {niveau.value} minoré en {errone.value}, critères non relevés"
+        else:
+            errone = superieur[niveau]
+            declencheurs = declencheurs_du_cas(enregistrement)
+            rejetee = rediger_reponse(
+                errone, declencheurs, enregistrement.constantes, enregistrement.langue.value
+            )
+            # Deux formes de sur-triage selon ce que le tableau contient :
+            # un seuil mal lu quand des criteres existent, une majoration sans
+            # aucun critere objectivable sinon.
+            cause = "seuil mal lu" if declencheurs else "aucun critère objectivé"
+            motif = f"sur-triage : {niveau.value} majoré en {errone.value}, {cause}"
+
+        if rejetee.strip() == enregistrement.reponse.strip():
             continue
-        rejetee = rediger_reponse(
-            minore, [], enregistrement.constantes, enregistrement.langue.value
-        )
+
         paires.append(
             PairePreference(
                 id=f"dpo_{enregistrement.id}",
@@ -280,11 +324,8 @@ def paires_de_triage(cas: list[Enregistrement]) -> list[PairePreference]:
                 source="triage_regles",
                 source_id=enregistrement.source_id,
                 licence="construit (règles explicites)",
-                type_preference="sous_triage",
-                motif_rejet=(
-                    f"sous-triage : {niveau.value} minoré en "
-                    f"{minore.value}, critères de gravité non relevés"
-                ),
+                type_preference=sens,
+                motif_rejet=motif,
                 groupe=enregistrement.groupe,
             )
         )

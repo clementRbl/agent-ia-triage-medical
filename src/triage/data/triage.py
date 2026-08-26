@@ -766,3 +766,26 @@ PRESENTATIONS_INEDITES: Final[tuple[Presentation, ...]] = (
         },
     ),
 )
+
+
+# Tous les signes de gravite, motifs d'entrainement et motifs reserves a
+# l'evaluation confondus : sert a retrouver apres coup si un cas en portait un.
+_TOUS_SIGNES_GRAVITE: Final[frozenset[str]] = frozenset(
+    signe
+    for presentation in PRESENTATIONS + PRESENTATIONS_INEDITES
+    for signes in presentation.signes_gravite.values()
+    for signe in signes
+)
+
+
+def signe_gravite_present(symptomes: list[str]) -> bool:
+    """Vrai si la liste de symptomes contient un signe de gravite."""
+    return bool(_TOUS_SIGNES_GRAVITE & set(symptomes))
+
+
+def declencheurs_du_cas(enregistrement: Enregistrement) -> list[Critere]:
+    """Recalcule les criteres remplis par un cas deja construit."""
+    _, declencheurs = evaluer_priorite(
+        enregistrement.constantes, signe_gravite_present(enregistrement.symptomes)
+    )
+    return declencheurs

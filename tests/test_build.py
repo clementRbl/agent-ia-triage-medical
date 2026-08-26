@@ -1,6 +1,7 @@
 """Assemblage des jeux : cloisonnement des viviers et qualite des paires DPO."""
 
 import json
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
@@ -22,6 +23,15 @@ RANG = {
     NiveauPriorite.DIFFEREE: 0,
     NiveauPriorite.MODEREE: 1,
     NiveauPriorite.MAXIMALE: 2,
+}
+
+LIBELLES = {
+    "URGENCE MAXIMALE": NiveauPriorite.MAXIMALE,
+    "URGENCE MODÉRÉE": NiveauPriorite.MODEREE,
+    "PRISE EN CHARGE DIFFÉRÉE": NiveauPriorite.DIFFEREE,
+    "HIGHEST PRIORITY": NiveauPriorite.MAXIMALE,
+    "MODERATE PRIORITY": NiveauPriorite.MODEREE,
+    "DEFERRED CARE": NiveauPriorite.DIFFEREE,
 }
 
 
@@ -73,37 +83,53 @@ def paires():
 
 
 class TestPairesDeTriage:
-    def test_les_cas_deja_differes_sont_ecartes(self, paires):
-        """Un cas differe ne peut pas etre sous-trie : il n'y a rien en dessous."""
-        cas_differes = sum(
-            1 for c in generer_cas(120) if c.niveau_priorite is NiveauPriorite.DIFFEREE
-        )
-        assert len(paires) == 120 - cas_differes
+    def test_tous_les_cas_produisent_une_paire(self, paires):
+        """Les cas differes etaient auparavant ecartes, ce qui privait le jeu de
+        tout contre-exemple de sur-triage."""
+        assert len(paires) == 120
 
-    def test_la_reponse_rejetee_minore_toujours(self, paires):
-        libelles = {
-            "URGENCE MAXIMALE": NiveauPriorite.MAXIMALE,
-            "URGENCE MODÉRÉE": NiveauPriorite.MODEREE,
-            "PRISE EN CHARGE DIFFÉRÉE": NiveauPriorite.DIFFEREE,
-            "HIGHEST PRIORITY": NiveauPriorite.MAXIMALE,
-            "MODERATE PRIORITY": NiveauPriorite.MODEREE,
-            "DEFERRED CARE": NiveauPriorite.DIFFEREE,
-        }
+    def test_les_deux_sens_d_erreur_sont_representes(self, paires):
+        """Un signal unidirectionnel apprend au modele que 'plus haut vaut
+        mieux' : c'est ce qui avait fait sur-trier 57 % des cas."""
+        sens = Counter(p.type_preference for p in paires)
+        assert sens["sous_triage"] > 0
+        assert sens["sur_triage"] > 0
+        moindre = min(sens["sous_triage"], sens["sur_triage"])
+        assert moindre / len(paires) > 0.35, f"répartition déséquilibrée : {sens}"
 
+    def test_une_urgence_maximale_ne_peut_etre_que_minoree(self, paires):
+        for paire in paires:
+            if "maximale majoré" in paire.motif_rejet:
+                raise AssertionError(f"{paire.id} : rien au-dessus de maximale")
+
+    def test_une_prise_en_charge_differee_ne_peut_etre_que_majoree(self, paires):
+        for paire in paires:
+            if "differee minoré" in paire.motif_rejet:
+                raise AssertionError(f"{paire.id} : rien en dessous de differee")
+
+    def test_la_reponse_rejetee_annonce_un_autre_niveau(self, paires):
         def niveau(texte: str) -> NiveauPriorite:
             premiere = texte.split("\n")[0]
-            for libelle, valeur in libelles.items():
+            for libelle, valeur in LIBELLES.items():
                 if libelle in premiere:
                     return valeur
             raise AssertionError(f"niveau introuvable dans {premiere!r}")
 
         for paire in paires:
-            assert RANG[niveau(paire.rejected)] < RANG[niveau(paire.chosen)], paire.id
+            attendu = niveau(paire.chosen)
+            obtenu = niveau(paire.rejected)
+            assert obtenu is not attendu, paire.id
+            ecart = RANG[obtenu] - RANG[attendu]
+            assert abs(ecart) == 1, f"{paire.id} : écart de {ecart} niveaux"
+            sens = "sur_triage" if ecart > 0 else "sous_triage"
+            assert paire.type_preference == sens, paire.id
 
-    def test_la_reponse_rejetee_est_coherente_avec_elle_meme(self, paires):
-        """Le contre-exemple doit etre plausible : un sous-triage reel ne liste
-        pas les criteres de gravite qu'il a manques."""
+    def test_le_sous_triage_declare_des_constantes_normales(self, paires):
+        """Un sous-triage reel ne liste pas les criteres de gravite qu'il a
+        manques : il affirme un tableau normal."""
         for paire in paires:
+            if paire.type_preference != "sous_triage":
+                continue
             marqueurs = ("dans les limites de la normale", "within normal limits")
             assert any(m in paire.rejected for m in marqueurs), paire.id
 
@@ -111,9 +137,9 @@ class TestPairesDeTriage:
         for paire in paires:
             assert paire.chosen.strip() != paire.rejected.strip()
 
-    def test_le_motif_de_rejet_est_renseigne(self, paires):
+    def test_le_motif_de_rejet_precise_le_sens(self, paires):
         for paire in paires:
-            assert "sous-triage" in paire.motif_rejet
+            assert paire.motif_rejet.startswith(("sous-triage", "sur-triage"))
 
 
 CORPUS = Path("data/raw/ultramedical_dev.json")
