@@ -23,6 +23,7 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [docs/03d-anonymisation-rgpd.md](docs/03d-anonymisation-rgpd.md) | Stratégie de masquage, contrôle qualité mesuré, traçabilité |
 | [data/processed/README.md](data/processed/README.md) | Carte du jeu de données produit (schéma, volumes, licences, limites) |
 | [docs/04-etape-2-sft-dpo.md](docs/04-etape-2-sft-dpo.md) | SFT + LoRA, alignement DPO, métriques |
+| [docs/04b-resultats-entrainement.md](docs/04b-resultats-entrainement.md) | Résultats mesurés : SFT, évaluation clinique, investigation DPO |
 | [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Docker, FastAPI, vLLM, CI/CD, go/no-go |
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |

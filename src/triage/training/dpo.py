@@ -99,8 +99,8 @@ def entrainer_dpo(
     modele = PeftModel.from_pretrained(base, str(config.adaptateur_sft), is_trainable=True)
     modele.config.use_cache = False
 
-    entrainement = charger_dpo("train", limite=limite_train)
-    validation = charger_dpo("validation", limite=limite_eval)
+    entrainement = charger_dpo("train", dossier=config.dossier_donnees, limite=limite_train)
+    validation = charger_dpo("validation", dossier=config.dossier_donnees, limite=limite_eval)
 
     trainer = DPOTrainer(
         model=modele,

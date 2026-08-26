@@ -118,8 +118,8 @@ def entrainer_sft(
     )
     modele.config.use_cache = False  # incompatible avec le checkpoint de gradient
 
-    entrainement = charger_sft("train", limite=limite_train)
-    validation = charger_sft("validation", limite=limite_eval)
+    entrainement = charger_sft("train", dossier=config.dossier_donnees, limite=limite_train)
+    validation = charger_sft("validation", dossier=config.dossier_donnees, limite=limite_eval)
 
     trainer = SFTTrainer(
         model=modele,

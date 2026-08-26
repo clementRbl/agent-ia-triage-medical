@@ -70,6 +70,7 @@ class ConfigSFT:
 
     experience_mlflow: str = "triage-sft"
     nom_run: str = ""
+    dossier_donnees: Path = Path("data/processed")
 
     def en_dict(self) -> dict[str, Any]:
         donnees = asdict(self)
