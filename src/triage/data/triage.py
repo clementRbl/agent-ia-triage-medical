@@ -584,13 +584,19 @@ _SEXES: Final[dict[str, tuple[str, ...]]] = {
 }
 
 
-def generer_cas(nombre: int, graine: int = 42, part_francais: float = 0.6) -> list[Enregistrement]:
+def generer_cas(
+    nombre: int,
+    graine: int = 42,
+    part_francais: float = 0.6,
+    presentations: tuple[Presentation, ...] = PRESENTATIONS,
+    prefixe: str = "triage",
+) -> list[Enregistrement]:
     """Construit `nombre` cas de triage, equilibres entre les trois niveaux."""
     tirage = random.Random(graine)
     enregistrements: list[Enregistrement] = []
 
     for index in range(nombre):
-        presentation = PRESENTATIONS[index % len(PRESENTATIONS)]
+        presentation = presentations[index % len(presentations)]
         cible = _CIBLES[index % len(_CIBLES)]
         langue = "fr" if tirage.random() < part_francais else "en"
 
@@ -618,7 +624,7 @@ def generer_cas(nombre: int, graine: int = 42, part_francais: float = 0.6) -> li
 
         enregistrements.append(
             Enregistrement(
-                id=f"triage_{index:05d}",
+                id=f"{prefixe}_{index:05d}",
                 langue=Langue(langue),
                 instruction=_rediger_instruction(
                     presentation, langue, age, sexe, symptomes, antecedents, constantes, duree
@@ -636,7 +642,127 @@ def generer_cas(nombre: int, graine: int = 42, part_francais: float = 0.6) -> li
                 niveau_confiance=0.7,
                 anonymise=True,  # aucun patient reel n'intervient
                 transformations=["generation_regles_french"],
-                groupe=f"triage_{presentation.cle}_{index:05d}",
+                groupe=f"{prefixe}_{presentation.cle}_{index:05d}",
             )
         )
     return enregistrements
+
+
+# --- Motifs reserves a l'evaluation ---------------------------------------
+#
+# Les 12 motifs ci-dessus alimentent l'entrainement. Le jeu de test en tire
+# des cas differents, mais batis sur les memes tableaux : un modele peut y
+# briller en apprenant la forme plutot que la regle.
+#
+# Ces motifs-ci ne servent qu'a l'evaluation et n'entrent jamais dans le jeu
+# d'entrainement. Ils mesurent ce qui compte vraiment : le modele a-t-il appris
+# a lire des constantes vitales, ou a reciter douze gabarits ?
+
+PRESENTATIONS_INEDITES: Final[tuple[Presentation, ...]] = (
+    Presentation(
+        cle="crise_convulsive",
+        motif={"fr": "crise convulsive", "en": "seizure"},
+        symptomes={
+            "fr": ("mouvements tonicocloniques", "morsure de langue", "confusion post-critique"),
+            "en": ("tonic-clonic movements", "tongue biting", "post-ictal confusion"),
+        },
+        signes_gravite={
+            "fr": ("crises répétées sans reprise de conscience", "déficit post-critique"),
+            "en": ("repeated seizures without recovery", "post-ictal deficit"),
+        },
+        antecedents={
+            "fr": ("épilepsie connue", "sevrage alcoolique", "traumatisme crânien récent"),
+            "en": ("known epilepsy", "alcohol withdrawal", "recent head injury"),
+        },
+    ),
+    Presentation(
+        cle="hemorragie_digestive",
+        motif={"fr": "hémorragie digestive", "en": "gastrointestinal bleeding"},
+        symptomes={
+            "fr": ("méléna", "hématémèse", "asthénie", "pâleur"),
+            "en": ("melena", "haematemesis", "fatigue", "pallor"),
+        },
+        signes_gravite={
+            "fr": ("hématémèse abondante", "malaise à l'orthostatisme", "extrémités froides"),
+            "en": ("massive haematemesis", "orthostatic syncope", "cold extremities"),
+        },
+        antecedents={
+            "fr": ("cirrhose", "traitement anticoagulant", "ulcère gastroduodénal"),
+            "en": ("cirrhosis", "anticoagulant therapy", "peptic ulcer"),
+        },
+    ),
+    Presentation(
+        cle="brulure",
+        motif={"fr": "brûlure thermique", "en": "thermal burn"},
+        symptomes={
+            "fr": ("brûlure de l'avant-bras", "phlyctènes", "douleur vive"),
+            "en": ("forearm burn", "blisters", "severe pain"),
+        },
+        signes_gravite={
+            "fr": (
+                "brûlure circonférentielle",
+                "atteinte des voies aériennes",
+                "suies péribuccales",
+            ),
+            "en": ("circumferential burn", "airway involvement", "perioral soot"),
+        },
+        antecedents={
+            "fr": ("aucun", "diabète", "neuropathie périphérique"),
+            "en": ("none", "diabetes", "peripheral neuropathy"),
+        },
+    ),
+    Presentation(
+        cle="intoxication_medicamenteuse",
+        motif={"fr": "intoxication médicamenteuse volontaire", "en": "drug overdose"},
+        symptomes={
+            "fr": ("somnolence", "nausées", "ingestion de comprimés"),
+            "en": ("drowsiness", "nausea", "tablet ingestion"),
+        },
+        signes_gravite={
+            "fr": ("troubles de la conscience", "dépression respiratoire", "myosis serré"),
+            "en": ("impaired consciousness", "respiratory depression", "pinpoint pupils"),
+        },
+        antecedents={
+            "fr": ("trouble dépressif", "tentative antérieure", "traitement psychotrope"),
+            "en": ("depressive disorder", "previous attempt", "psychotropic treatment"),
+        },
+    ),
+    Presentation(
+        cle="douleur_scrotale",
+        motif={"fr": "douleur scrotale aiguë", "en": "acute scrotal pain"},
+        symptomes={
+            "fr": ("douleur testiculaire brutale", "nausées", "tuméfaction"),
+            "en": ("sudden testicular pain", "nausea", "swelling"),
+        },
+        signes_gravite={
+            "fr": ("abolition du réflexe crémastérien", "testicule ascensionné"),
+            "en": ("absent cremasteric reflex", "high-riding testis"),
+        },
+        antecedents={
+            "fr": ("aucun", "épisode similaire résolutif", "cryptorchidie opérée"),
+            "en": ("none", "similar resolved episode", "operated cryptorchidism"),
+        },
+        age_min=14,
+        age_max=45,
+    ),
+    Presentation(
+        cle="polytraumatisme",
+        motif={"fr": "accident de la voie publique", "en": "road traffic collision"},
+        symptomes={
+            "fr": ("douleur thoracique pariétale", "plaie du cuir chevelu", "douleur du bassin"),
+            "en": ("chest wall pain", "scalp laceration", "pelvic pain"),
+        },
+        signes_gravite={
+            "fr": (
+                "éjection du véhicule",
+                "instabilité du bassin",
+                "abolition du murmure vésiculaire",
+            ),
+            "en": ("ejection from vehicle", "pelvic instability", "absent breath sounds"),
+        },
+        antecedents={
+            "fr": ("aucun", "traitement anticoagulant", "splénectomie"),
+            "en": ("none", "anticoagulant therapy", "splenectomy"),
+        },
+    ),
+)

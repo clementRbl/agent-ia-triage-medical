@@ -96,25 +96,15 @@ def cas_de_triage(split: str = "test", dossier: Path = TRAITE) -> pd.DataFrame:
     ].reset_index(drop=True)
 
 
-def evaluer_modele(
+def _evaluer(
     nom: str,
-    adaptateur: Path | None = None,
-    split: str = "test",
-    limite: int | None = None,
-    tokens_max: int = 320,
+    instructions: list[str],
+    attendus: list[NiveauPriorite],
+    adaptateur: Path | None,
+    tokens_max: int,
 ) -> tuple[ResultatEvaluation, list[str]]:
-    """Fait tourner un modele sur les cas de triage et calcule ses metriques."""
-    cas = cas_de_triage(split)
-    if limite:
-        cas = cas.head(limite)
-    if cas.empty:
-        raise ValueError(f"Aucun cas de triage dans le split {split!r}")
-
     reseau, tokenizer = charger_modele(adaptateur)
-    instructions = cas["instruction"].tolist()
     reponses = generer(reseau, tokenizer, instructions, tokens_max=tokens_max)
-
-    attendus = [NiveauPriorite(v) for v in cas["niveau_priorite"]]
     predits = [extraire_niveau(r) for r in reponses]
 
     del reseau
@@ -122,6 +112,55 @@ def evaluer_modele(
         torch.cuda.empty_cache()
 
     return comparer(attendus, predits, nom, instructions=instructions), reponses
+
+
+def evaluer_modele(
+    nom: str,
+    adaptateur: Path | None = None,
+    split: str = "test",
+    limite: int | None = None,
+    tokens_max: int = 320,
+) -> tuple[ResultatEvaluation, list[str]]:
+    """Evalue sur les cas de triage du jeu, batis sur les motifs d'entrainement."""
+    cas = cas_de_triage(split)
+    if limite:
+        cas = cas.head(limite)
+    if cas.empty:
+        raise ValueError(f"Aucun cas de triage dans le split {split!r}")
+    return _evaluer(
+        nom,
+        cas["instruction"].tolist(),
+        [NiveauPriorite(v) for v in cas["niveau_priorite"]],
+        adaptateur,
+        tokens_max,
+    )
+
+
+def evaluer_generalisation(
+    nom: str,
+    adaptateur: Path | None = None,
+    nombre: int = 120,
+    graine: int = 777,
+    tokens_max: int = 320,
+) -> tuple[ResultatEvaluation, list[str]]:
+    """Evalue sur des motifs de recours **jamais vus a l'entrainement**.
+
+    Le jeu de test ordinaire reutilise les douze motifs d'entrainement : un
+    modele peut y exceller en retenant la forme des cas. Ici les six motifs
+    sont inedits, ce qui distingue l'apprentissage de la regle de triage de la
+    simple memorisation des gabarits.
+    """
+    from triage.data.triage import PRESENTATIONS_INEDITES, generer_cas
+
+    cas = generer_cas(
+        nombre,
+        graine=graine,
+        presentations=PRESENTATIONS_INEDITES,
+        prefixe="generalisation",
+    )
+    attendus = [c.niveau_priorite for c in cas if c.niveau_priorite is not None]
+    instructions = [c.instruction for c in cas if c.niveau_priorite is not None]
+    return _evaluer(nom, instructions, attendus, adaptateur, tokens_max)
 
 
 def ecrire_rapport(
