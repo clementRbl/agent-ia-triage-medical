@@ -22,11 +22,21 @@ TRAITE = RACINE / "data" / "processed"
 
 
 def _manifestes_avec_empreintes() -> list[Path]:
-    return [
-        f
-        for f in sorted(MANIFESTES.glob("*.json"))
-        if json.loads(f.read_text(encoding="utf-8")).get("empreintes")
-    ]
+    """Dernier manifeste de chaque etape.
+
+    Un manifeste decrit l'etat des artefacts *au moment ou il a ete ecrit*.
+    Une reconstruction produit un nouveau manifeste et rend le precedent
+    caduc : verifier l'historique ferait echouer le controle a chaque
+    reconstruction, ce qui n'aurait aucun sens. On ne verifie donc que le plus
+    recent par etape, les anciens restant conserves comme trace.
+    """
+    derniers: dict[str, Path] = {}
+    for fichier in sorted(MANIFESTES.glob("*.json")):
+        contenu = json.loads(fichier.read_text(encoding="utf-8"))
+        if not contenu.get("empreintes"):
+            continue
+        derniers[contenu["etape"]] = fichier  # l'ordre alphabetique suit l'horodatage
+    return sorted(derniers.values())
 
 
 @pytest.mark.parametrize("manifeste", _manifestes_avec_empreintes(), ids=lambda p: p.name)
@@ -47,17 +57,14 @@ def test_empreintes_du_manifeste_correspondent_aux_fichiers(manifeste):
         pytest.skip("aucun artefact référencé n'est présent localement")
 
 
-@pytest.mark.parametrize(
-    ("fichier", "colonne_groupe"),
-    [("sft.parquet", "cas_source"), ("dpo.parquet", "prompt_id")],
-)
-def test_absence_de_fuite_entre_les_jeux(fichier, colonne_groupe):
+@pytest.mark.parametrize("fichier", ["sft.parquet", "dpo.parquet"])
+def test_absence_de_fuite_entre_les_jeux(fichier):
     """Garde-fou du cahier des charges : jamais un meme groupe des deux cotes."""
     chemin = TRAITE / fichier
     if not chemin.exists():
         pytest.skip(f"{fichier} pas encore produit")
     donnees = pd.read_parquet(chemin)
-    verifier_absence_fuite(donnees, colonne_groupe)
+    verifier_absence_fuite(donnees, "groupe")
 
 
 def test_le_rapport_de_controle_du_masquage_reste_sous_le_seuil():
