@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pandas as pd
-
 import pytest
 
 from triage.data.build import (
