@@ -1,6 +1,9 @@
 """Assemblage des jeux : cloisonnement des viviers et qualite des paires DPO."""
 
 import json
+from pathlib import Path
+
+import pandas as pd
 
 import pytest
 
@@ -114,21 +117,83 @@ class TestPairesDeTriage:
             assert "sous-triage" in paire.motif_rejet
 
 
+CORPUS = Path("data/raw/ultramedical_dev.json")
+sans_corpus = pytest.mark.skipif(not CORPUS.exists(), reason="corpus UltraMedical absent")
+
+
 @pytest.mark.integrite
 class TestSurCorpusReel:
-    """Controles necessitant les corpus telecharges."""
+    """Controles necessitant les corpus bruts, absents d'un depot clone."""
 
+    @sans_corpus
     def test_le_biais_de_longueur_est_exclu(self):
-        paires = construire_dpo(60, fichier="ultramedical_dev.json")
-        if not paires:
-            pytest.skip("corpus UltraMedical absent")
+        paires = construire_dpo(60, fichier=CORPUS.name)
+        assert paires
         assert all(p.type_preference not in LABELS_EXCLUS for p in paires)
 
-    def test_sft_et_dpo_ne_partagent_aucun_prompt(self):
-        """Le garde-fou central : aucun recouvrement entre entrainement
-        supervise et alignement."""
-        sft = bloc_c_socle_anglophone(60, fichier="ultramedical_dev.json")
-        dpo = construire_dpo(60, fichier="ultramedical_dev.json")
-        if not sft or not dpo:
-            pytest.skip("corpus UltraMedical absent")
+    @sans_corpus
+    def test_les_blocs_puisent_dans_des_viviers_disjoints(self):
+        sft = bloc_c_socle_anglophone(60, fichier=CORPUS.name)
+        dpo = construire_dpo(60, fichier=CORPUS.name)
+        assert sft and dpo
         assert not {e.source_id for e in sft} & {p.source_id for p in dpo}
+
+
+@pytest.mark.integrite
+class TestSurJeuxProduits:
+    """Memes garanties, verifiees sur les parquet versionnes.
+
+    Ces controles-la tournent en integration continue : ils portent sur le
+    livrable lui-meme, pas sur des corpus bruts absents du depot.
+    """
+
+    @staticmethod
+    def _charger(nom: str):
+        chemin = Path("data/processed") / nom
+        if not chemin.exists():
+            pytest.skip(f"{nom} pas encore produit")
+        return pd.read_parquet(chemin)
+
+    def test_le_jeu_sft_compte_bien_cinq_mille_paires(self):
+        assert len(self._charger("sft.parquet")) == 5000
+
+    def test_aucun_prompt_de_corpus_ne_sert_au_sft_et_au_dpo(self):
+        """Cloisonnement des viviers UltraMedical."""
+        sft = self._charger("sft.parquet")
+        dpo = self._charger("dpo.parquet")
+        prompts_sft = set(sft[sft.source.str.startswith("UltraMedical")].source_id)
+        prompts_dpo = set(dpo[dpo.source.str.startswith("UltraMedical")].source_id)
+        communs = prompts_sft & prompts_dpo
+        assert not communs, sorted(communs)[:5]
+
+    def test_un_cas_partage_reste_dans_le_meme_split(self):
+        """Les cas de triage alimentent volontairement les deux jeux : le SFT
+        apprend la bonne reponse, le DPO apprend a ecarter le sous-triage du
+        meme cas. Ce n'est une fuite que si le cas change de split au passage.
+        """
+        sft = self._charger("sft.parquet").set_index("source_id").split
+        dpo = self._charger("dpo.parquet").set_index("source_id").split
+        communs = sft.index.intersection(dpo.index)
+        assert len(communs) > 0, "aucun cas partagé : le contrôle serait vide"
+        divergents = [
+            identifiant for identifiant in communs if sft.loc[identifiant] != dpo.loc[identifiant]
+        ]
+        assert not divergents, divergents[:5]
+
+    def test_le_jeu_est_bien_bilingue(self):
+        langues = self._charger("sft.parquet").langue.value_counts()
+        assert set(langues.index) == {"fr", "en"}
+        assert langues.min() / langues.sum() > 0.15
+
+    def test_tout_enregistrement_issu_d_un_corpus_est_anonymise(self):
+        sft = self._charger("sft.parquet")
+        issus_corpus = sft[sft.bloc != "D_triage_structure"]
+        assert issus_corpus.anonymise.all()
+
+    def test_les_cas_de_triage_portent_les_trois_niveaux(self):
+        sft = self._charger("sft.parquet")
+        niveaux = sft[sft.bloc == "D_triage_structure"].niveau_priorite
+        assert set(niveaux) == {"maximale", "moderee", "differee"}
+
+    def test_aucune_paire_de_preference_biaisee_par_la_longueur(self):
+        assert "length" not in set(self._charger("dpo.parquet").type_preference)
