@@ -1,0 +1,54 @@
+{
+  "etape": "construction_sft",
+  "entrees": [],
+  "sorties": [
+    "data/processed/sft.parquet"
+  ],
+  "empreintes": {
+    "data/processed/sft.parquet": "987337580ba45388b5d8ba071cd9026202c7c3853a2ae24e5b9988423e408068"
+  },
+  "nb_lignes": {
+    "data/processed/sft.parquet": 5000
+  },
+  "parametres": {
+    "volumes": {
+      "A": 2000,
+      "B": 1000,
+      "C": 1000,
+      "D": 1000
+    },
+    "graine": 42,
+    "viviers": {
+      "sft": 0.35,
+      "dpo": 0.5,
+      "eval": 0.15
+    }
+  },
+  "statistiques": {
+    "par_bloc": {
+      "A_raisonnement_clinique": 2000,
+      "B_connaissance_medicale": 1000,
+      "C_socle_anglophone": 1000,
+      "D_triage_structure": 1000
+    },
+    "par_langue": {
+      "fr": 3637,
+      "en": 1363
+    },
+    "par_split": {
+      "train": 3986,
+      "test": 526,
+      "validation": 488
+    },
+    "entites_anonymisees": {
+      "PERSON": 5584,
+      "FR_CIVILITE": 1128,
+      "ETABLISSEMENT_SANTE": 904,
+      "FR_DATE_ABSOLUE": 62,
+      "PHONE_NUMBER": 16
+    },
+    "textes_anonymises": 4000
+  },
+  "horodatage": "2026-08-26T07:37:54.511568+00:00",
+  "revision_code": "bcdd12c"
+}

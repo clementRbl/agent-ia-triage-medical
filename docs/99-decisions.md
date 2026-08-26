@@ -20,10 +20,20 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-08-20 | Splits **par `clinical_case`** et partition des `prompt_id` | Plusieurs questions partagent un même cas clinique → un split par ligne provoquerait une fuite train/éval |
 | 2026-08-20 | Exclusion des paires DPO `label_type == "length"` | Biais de longueur connu, fausserait l'alignement |
 
+| 2026-08-20 | Découpage **par groupe** via empreinte du `clinical_case` | Affectation déterministe et stable quand le corpus grandit ; un découpage ligne à ligne ferait fuiter un même cas entre train et test |
+| 2026-08-20 | CI mise en place dès la semaine 1 | Garde toutes les PR suivantes et avance le livrable 4 |
+| 2026-08-20 | Notebook d'exploration important `src/`, sans logique propre | Reproductibilité : les mêmes traitements tournent en exploration, en production et sous CI |
+
+| 2026-08-26 | Bloc C et DPO tirés d'UltraMedical via **viviers disjoints** (35/50/15) | Un même prompt ne peut pas servir au SFT, au DPO et à l'évaluation |
+| 2026-08-26 | Barème de triage **par règles explicites**, label déduit et non choisi | Une règle fausse devient un bug détectable par un test, au lieu d'une erreur diffuse dans 1 000 exemples |
+| 2026-08-26 | Réponses `rejected` de sous-triage **cohérentes avec elles-mêmes** | Une réponse qui annonce un niveau bas tout en listant les critères de gravité serait trop facile à écarter pour apporter quoi que ce soit à l'alignement |
+| 2026-08-26 | Parquet versionné, JSONL régénérable | Le parquet est le format natif HF Datasets et pèse 8 Mo contre 22 Mo pour le JSONL |
+
 ## À trancher
 
 | Sujet | Options | Statut |
 |---|---|---|
 | Hébergement de l'endpoint | RunPod / Scaleway / HF Endpoints / autre | ⏳ à trancher avant S4 |
-| Volume du jeu DPO | 1 000 / 2 000 / 3 000 paires | ⏳ à calibrer en S3 |
+| ~~Volume du jeu DPO~~ | 2 667 paires produites | ✅ tranché |
 | Hébergement du dataset | HF Hub (public/privé) / repo git + LFS | ⏳ |
+| Vérificateur de types | `ty` (Astral) / `mypy` | ⏳ job CI à ajouter une fois choisi |

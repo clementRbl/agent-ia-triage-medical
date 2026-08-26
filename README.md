@@ -20,12 +20,53 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [docs/03-etape-1-donnees.md](docs/03-etape-1-donnees.md) | Collecte, anonymisation, RGPD, schéma de métadonnées |
 | [docs/03b-inventaire-sources.md](docs/03b-inventaire-sources.md) | Inventaire vérifié des sources, licences, analyse de contenu |
 | [docs/03c-plan-composition-dataset.md](docs/03c-plan-composition-dataset.md) | Composition chiffrée des jeux SFT et DPO, règles anti-fuite |
+| [docs/03d-anonymisation-rgpd.md](docs/03d-anonymisation-rgpd.md) | Stratégie de masquage, contrôle qualité mesuré, traçabilité |
+| [data/processed/README.md](data/processed/README.md) | Carte du jeu de données produit (schéma, volumes, licences, limites) |
 | [docs/04-etape-2-sft-dpo.md](docs/04-etape-2-sft-dpo.md) | SFT + LoRA, alignement DPO, métriques |
 | [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Docker, FastAPI, vLLM, CI/CD, go/no-go |
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |
 
+## Jeu de données
+
+`data/processed/` contient le livrable 1 : **5 000 paires SFT** bilingues et
+**2 667 paires DPO**, au format parquet (natif Hugging Face Datasets).
+
+```bash
+# régénérer le JSONL
+uv run python -c "from triage.data.build import exporter_jsonl; exporter_jsonl()"
+```
+
+Voir la [carte du jeu de données](data/processed/README.md).
+
+## Exploration
+
+```bash
+uv run jupyter lab notebooks/01_exploration_corpus.ipynb
+```
+
+Le notebook caractérise les corpus et contrôle la chaîne d'anonymisation. Il
+importe `src/triage/` : aucune logique n'y est dupliquée.
+
+## Installation
+
+```bash
+uv sync
+uv run pytest
+```
+
+## Intégration continue
+
+Trois jobs GitHub Actions sur chaque PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)) :
+
+| Job | Contrôle |
+|---|---|
+| Lint et format | `ruff check` + `ruff format --check` sur tout le dépôt, notebooks compris |
+| Tests | suite unitaire |
+| Intégrité du jeu de données | empreintes des manifestes, seuil de PII résiduelle, absence de fuite entre les jeux |
+
 ## État
 
-Cadrage terminé. Stack technique en cours de validation — voir
-[docs/99-decisions.md](docs/99-decisions.md).
+Semaine 1 en cours : ingestion des corpus et chaîne d'anonymisation
+opérationnelles et testées. Voir [docs/99-decisions.md](docs/99-decisions.md)
+pour les décisions techniques.
