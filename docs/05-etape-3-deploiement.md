@@ -66,10 +66,14 @@ cinq minutes d'inactivité. Hugging Face Spaces, seule autre offre gratuite cré
 limitée au CPU : vLLM y perdrait sa raison d'être et les mesures de latence
 tout leur sens.
 
-Contrepartie assumée : le conteneur s'éteint après cinq minutes sans trafic,
-et le premier appel suivant paie un démarrage à froid de 27 s. C'est le prix
-du coût nul ; le script de mesure le rapporte séparément plutôt que de le
-noyer dans la moyenne.
+Contrepartie assumée : le conteneur s'éteint après cinq minutes sans trafic.
+Le premier appel qui suit paie **122 s d'allumage** (conteneur, vLLM,
+chargement du modèle) puis **27 s** pour le premier triage, soit environ deux
+minutes et demie. C'est le prix du coût nul ; le script de mesure rapporte les
+deux durées séparément plutôt que de les noyer dans la moyenne.
+
+Un service réel maintiendrait au moins un conteneur allumé en permanence — la
+même plateforme le permet, contre un coût horaire continu.
 
 ### Le GPU a été choisi sur mesure, pas sur catalogue
 

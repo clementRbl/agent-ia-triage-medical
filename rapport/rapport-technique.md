@@ -585,17 +585,36 @@ l'expérience de personne.
 | Séquentiel (30 appels) | 2 002 ms | 2 051 ms | 2 558 ms | **2 560 ms** | 2 732 ms | 0 |
 | 8 requêtes en parallèle | 2 092 ms | 2 172 ms | 2 594 ms | **2 675 ms** | 2 866 ms | 0 |
 
+La chaîne de livraison rejoue ces mesures après chaque déploiement, depuis un
+runner distinct : 2 023 ms de médiane séquentielle et 2 001 ms sous charge lors
+du dernier passage. **Les chiffres ci-dessus ne dépendent donc pas du poste qui
+les a produits.**
+
 **Le passage à huit requêtes simultanées ne coûte que 6 % de latence
 médiane.** C'est l'apport concret de vLLM : le traitement par lots continu
 absorbe la concurrence au lieu de la sérialiser. Pour un service d'accueil où
 plusieurs postes trient en parallèle, ce comportement compte davantage que la
 latence à vide.
 
-Le **démarrage à froid** est de 27 s — allumage du conteneur, chargement du
-modèle et de l'adaptateur. Il est rapporté séparément plutôt que noyé dans la
-moyenne : c'est la latence que subit le premier patient après une période
-creuse, conséquence assumée d'un hébergement à coût nul qui éteint le
-conteneur au bout de cinq minutes d'inactivité.
+### Le démarrage à froid, en toute rigueur
+
+L'hébergement gratuit éteint le conteneur après cinq minutes d'inactivité. Le
+premier appel qui suit paie donc une remise en route, mesurée en deux temps par
+la chaîne de livraison elle-même :
+
+| Étape | Durée |
+| --- | --- |
+| Allumage : conteneur, vLLM, chargement du modèle | **122 s** |
+| Premier triage : chargement de l'adaptateur puis génération | **27 s** |
+| **Total pour le premier appel sur conteneur éteint** | **≈ 149 s** |
+
+**Deux minutes et demie.** C'est considérable, et c'est la contrepartie du coût
+nul. Un service réel maintiendrait au moins un conteneur allumé en permanence —
+la même plateforme le permet, contre un coût horaire continu.
+
+Ces deux durées sont rapportées séparément plutôt qu'agrégées à la latence
+nominale : les mélanger donnerait une moyenne que rien ne permettrait
+d'interpréter.
 
 ### Le choix du GPU s'est fait sur mesure, pas sur catalogue
 
@@ -739,8 +758,9 @@ partiel obtiendra des priorités systématiquement hautes.
 seuils physiologiques diffèrent, et un modèle entraîné sur des bornes adultes y
 serait dangereux.
 
-**Les latences sont mesurées sur une RTX 3080**, pas sur le GPU d'hébergement
-gratuit. Elles constituent un plancher.
+**Le premier appel après une période creuse coûte deux minutes et demie.**
+L'hébergement gratuit éteint le conteneur ; un service réel en maintiendrait un
+allumé, contre un coût horaire continu.
 
 **L'état des entretiens est en mémoire.** Un redémarrage du conteneur perd les
 entretiens en cours — acceptable pour un POC, à corriger avant tout pilote.
