@@ -152,9 +152,9 @@ def evaluer_generalisation(
     """Evalue sur des motifs de recours **jamais vus a l'entrainement**.
 
     Le jeu de test ordinaire reutilise les douze motifs d'entrainement : un
-    modele peut y exceller en retenant la forme des cas. Ici les six motifs
-    sont inedits, ce qui distingue l'apprentissage de la regle de triage de la
-    simple memorisation des gabarits.
+    modele peut y exceller en retenant la forme des cas. Ici les quatorze
+    motifs sont inedits, ce qui distingue l'apprentissage de la regle de triage
+    de la simple memorisation des gabarits.
     """
     from triage.data.triage import PRESENTATIONS_INEDITES, generer_cas
 

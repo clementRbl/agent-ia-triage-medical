@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from triage.training.inference import (
+    CAS_GENERALISATION,
     ecrire_rapport,
     evaluer_generalisation,
     evaluer_modele,
@@ -30,7 +31,12 @@ def main() -> int:
     parser.add_argument(
         "--etiquette-dpo", default="dpo", help="nom sous lequel reporter le run DPO"
     )
-    parser.add_argument("--limite", type=int, default=None, help="nombre de cas")
+    parser.add_argument(
+        "--limite",
+        type=int,
+        default=None,
+        help=f"nombre de cas ({CAS_GENERALISATION} en généralisation, tout le split sinon)",
+    )
     parser.add_argument("--split", default="test")
     parser.add_argument(
         "--sans-base",
@@ -59,7 +65,9 @@ def main() -> int:
         print(f"[{nom}] génération en cours…", flush=True)
         if args.generalisation:
             resultat, reponses = evaluer_generalisation(
-                f"{nom}_generalisation", adaptateur=adaptateur, nombre=args.limite or 120
+                f"{nom}_generalisation",
+                adaptateur=adaptateur,
+                nombre=args.limite or CAS_GENERALISATION,
             )
         else:
             resultat, reponses = evaluer_modele(
