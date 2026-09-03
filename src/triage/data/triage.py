@@ -746,6 +746,146 @@ PRESENTATIONS_INEDITES: Final[tuple[Presentation, ...]] = (
         age_max=45,
     ),
     Presentation(
+        cle="colique_nephretique",
+        motif={"fr": "colique néphrétique", "en": "renal colic"},
+        symptomes={
+            "fr": ("douleur lombaire irradiant vers l'aine", "agitation", "nausées"),
+            "en": ("flank pain radiating to the groin", "restlessness", "nausea"),
+        },
+        signes_gravite={
+            "fr": ("fièvre associée", "anurie", "rein unique connu"),
+            "en": ("associated fever", "anuria", "known solitary kidney"),
+        },
+        antecedents={
+            "fr": ("lithiase urinaire", "goutte", "aucun"),
+            "en": ("urinary stones", "gout", "none"),
+        },
+    ),
+    Presentation(
+        cle="douleur_mollet",
+        motif={"fr": "douleur du mollet", "en": "calf pain"},
+        symptomes={
+            "fr": ("mollet douloureux et tendu", "œdème unilatéral", "chaleur locale"),
+            "en": ("painful tense calf", "unilateral swelling", "local warmth"),
+        },
+        signes_gravite={
+            "fr": ("douleur thoracique associée", "dyspnée d'apparition brutale", "hémoptysie"),
+            "en": ("associated chest pain", "sudden breathlessness", "haemoptysis"),
+        },
+        antecedents={
+            "fr": (
+                "immobilisation prolongée",
+                "contraception œstroprogestative",
+                "néoplasie évolutive",
+            ),
+            "en": ("prolonged immobilisation", "combined oral contraception", "active cancer"),
+        },
+    ),
+    Presentation(
+        cle="hypoglycemie",
+        motif={"fr": "malaise hypoglycémique", "en": "hypoglycaemic episode"},
+        symptomes={
+            "fr": ("sueurs profuses", "tremblements", "sensation de faim impérieuse"),
+            "en": ("profuse sweating", "tremor", "intense hunger"),
+        },
+        signes_gravite={
+            "fr": ("troubles du comportement", "coma", "convulsions"),
+            "en": ("behavioural disturbance", "coma", "convulsions"),
+        },
+        antecedents={
+            "fr": ("diabète insulinotraité", "insuffisance rénale", "sulfamides hypoglycémiants"),
+            "en": ("insulin-treated diabetes", "renal failure", "sulfonylurea treatment"),
+        },
+    ),
+    Presentation(
+        cle="douleur_pelvienne",
+        motif={"fr": "douleur pelvienne aiguë", "en": "acute pelvic pain"},
+        symptomes={
+            "fr": ("douleur hypogastrique", "métrorragies", "retard de règles"),
+            "en": ("lower abdominal pain", "vaginal bleeding", "missed period"),
+        },
+        signes_gravite={
+            "fr": ("douleur scapulaire", "lipothymie", "défense hypogastrique"),
+            "en": ("shoulder tip pain", "near-syncope", "lower abdominal guarding"),
+        },
+        antecedents={
+            "fr": ("grossesse extra-utérine antérieure", "dispositif intra-utérin", "salpingite"),
+            "en": ("previous ectopic pregnancy", "intrauterine device", "pelvic infection"),
+        },
+        age_min=16,
+        age_max=45,
+    ),
+    Presentation(
+        cle="epistaxis",
+        motif={"fr": "épistaxis", "en": "nosebleed"},
+        symptomes={
+            "fr": ("saignement de narine", "écoulement postérieur", "anxiété"),
+            "en": ("nostril bleeding", "posterior drainage", "anxiety"),
+        },
+        signes_gravite={
+            "fr": ("saignement bilatéral incoercible", "pâleur", "déglutitions répétées"),
+            "en": ("uncontrollable bilateral bleeding", "pallor", "repeated swallowing"),
+        },
+        antecedents={
+            "fr": ("traitement anticoagulant", "hypertension artérielle", "maladie de Willebrand"),
+            "en": ("anticoagulant therapy", "hypertension", "von Willebrand disease"),
+        },
+    ),
+    Presentation(
+        cle="agitation",
+        motif={"fr": "état d'agitation", "en": "acute agitation"},
+        symptomes={
+            "fr": ("propos incohérents", "déambulation", "insomnie"),
+            "en": ("incoherent speech", "pacing", "insomnia"),
+        },
+        signes_gravite={
+            "fr": ("hétéro-agressivité", "idées suicidaires exprimées", "hallucinations"),
+            "en": ("aggression towards others", "expressed suicidal ideation", "hallucinations"),
+        },
+        antecedents={
+            "fr": ("trouble bipolaire", "sevrage alcoolique", "schizophrénie"),
+            "en": ("bipolar disorder", "alcohol withdrawal", "schizophrenia"),
+        },
+    ),
+    Presentation(
+        cle="retention_urinaire",
+        motif={"fr": "rétention aiguë d'urine", "en": "acute urinary retention"},
+        symptomes={
+            "fr": ("impossibilité d'uriner", "globe vésical", "douleur hypogastrique"),
+            "en": ("inability to pass urine", "distended bladder", "lower abdominal pain"),
+        },
+        signes_gravite={
+            "fr": ("insuffisance rénale aiguë", "fièvre", "hématurie macroscopique"),
+            "en": ("acute kidney injury", "fever", "visible haematuria"),
+        },
+        antecedents={
+            "fr": ("hypertrophie bénigne de prostate", "traitement anticholinergique", "aucun"),
+            "en": ("benign prostatic hyperplasia", "anticholinergic treatment", "none"),
+        },
+        age_min=45,
+    ),
+    Presentation(
+        cle="eruption_febrile",
+        motif={"fr": "éruption cutanée fébrile", "en": "febrile rash"},
+        symptomes={
+            "fr": ("éruption maculo-papuleuse", "fièvre", "asthénie"),
+            "en": ("maculopapular rash", "fever", "fatigue"),
+        },
+        signes_gravite={
+            "fr": (
+                "purpura ne s'effaçant pas à la vitropression",
+                "atteinte des muqueuses",
+                "décollement cutané",
+            ),
+            "en": ("non-blanching purpura", "mucosal involvement", "skin detachment"),
+        },
+        antecedents={
+            "fr": ("introduction récente d'un médicament", "immunodépression", "aucun"),
+            "en": ("recently started medication", "immunosuppression", "none"),
+        },
+        age_min=14,
+    ),
+    Presentation(
         cle="polytraumatisme",
         motif={"fr": "accident de la voie publique", "en": "road traffic collision"},
         symptomes={

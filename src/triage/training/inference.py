@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pandas as pd
 import torch
@@ -136,10 +136,16 @@ def evaluer_modele(
     )
 
 
+# 600 cas, soit 200 urgences maximales : l'intervalle de confiance du taux de
+# sous-triage critique tombe alors a environ +/- 5 points, contre +/- 10 avec
+# les 120 cas initiaux. En dessous, aucun seuil d'acceptation n'est fixable.
+CAS_GENERALISATION: Final[int] = 600
+
+
 def evaluer_generalisation(
     nom: str,
     adaptateur: Path | None = None,
-    nombre: int = 120,
+    nombre: int = CAS_GENERALISATION,
     graine: int = 777,
     tokens_max: int = 320,
 ) -> tuple[ResultatEvaluation, list[str]]:

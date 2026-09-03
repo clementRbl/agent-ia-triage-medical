@@ -33,16 +33,20 @@ def main() -> int:
     parser.add_argument("--limite", type=int, default=None, help="nombre de cas")
     parser.add_argument("--split", default="test")
     parser.add_argument(
+        "--sans-base",
+        action="store_true",
+        help="ne pas réévaluer le modèle de base, dont le score est déjà établi",
+    )
+    parser.add_argument(
         "--generalisation",
         action="store_true",
         help="évaluer sur des motifs de recours jamais vus à l'entraînement",
     )
     args = parser.parse_args()
 
-    a_evaluer: list[tuple[str, Path | None]] = [
-        ("base", None),
-        ("sft", Path("outputs/sft/adaptateur")),
-    ]
+    a_evaluer: list[tuple[str, Path | None]] = [("sft", Path("outputs/sft/adaptateur"))]
+    if not args.sans_base:
+        a_evaluer.insert(0, ("base", None))
     if args.dpo:
         a_evaluer.append((args.etiquette_dpo, args.adaptateur_dpo))
 

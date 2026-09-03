@@ -8,7 +8,12 @@ from dataclasses import replace
 
 import pytest
 
-from triage.data.triage import PRESENTATIONS, evaluer_priorite, generer_cas
+from triage.data.triage import (
+    PRESENTATIONS,
+    PRESENTATIONS_INEDITES,
+    evaluer_priorite,
+    generer_cas,
+)
 from triage.schema import Constantes, NiveauPriorite
 
 NORMALES = Constantes(
@@ -156,3 +161,41 @@ class TestGeneration:
                 assert "FC " not in cas.instruction
             else:
                 assert "FC " in cas.instruction
+
+
+class TestMotifsReserves:
+    """Les motifs d'evaluation ne doivent jamais entrer dans l'entrainement."""
+
+    def test_aucun_recouvrement_entre_les_deux_ensembles(self):
+        entraines = {p.cle for p in PRESENTATIONS}
+        reserves = {p.cle for p in PRESENTATIONS_INEDITES}
+        assert not entraines & reserves
+
+    def test_diversite_suffisante(self):
+        """Peu de motifs pour beaucoup de cas reviendrait a repeter les memes
+        tableaux : le volume ne remplace pas la diversite."""
+        assert len(PRESENTATIONS_INEDITES) >= 12
+
+    def test_chaque_motif_est_bilingue(self):
+        for presentation in PRESENTATIONS + PRESENTATIONS_INEDITES:
+            for champ in (
+                presentation.motif,
+                presentation.symptomes,
+                presentation.signes_gravite,
+                presentation.antecedents,
+            ):
+                assert set(champ) == {"fr", "en"}, presentation.cle
+                assert all(champ.values()), presentation.cle
+
+    def test_les_cas_reserves_couvrent_les_trois_niveaux(self):
+        cas = generer_cas(
+            120, graine=777, presentations=PRESENTATIONS_INEDITES, prefixe="generalisation"
+        )
+        assert {c.niveau_priorite for c in cas} == set(NiveauPriorite)
+
+    def test_tous_les_motifs_reserves_sont_tires(self):
+        cas = generer_cas(
+            600, graine=777, presentations=PRESENTATIONS_INEDITES, prefixe="generalisation"
+        )
+        tires = {c.source_id.rsplit("_", 1)[0] for c in cas}
+        assert tires == {p.cle for p in PRESENTATIONS_INEDITES}
