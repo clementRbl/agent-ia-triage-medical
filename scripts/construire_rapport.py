@@ -47,9 +47,12 @@ def construire_html(source: Path, style: Path, destination: Path) -> None:
             "--from=markdown+raw_html+pipe_tables+footnotes",
             "--to=html5",
             "--standalone",
+            # Gabarit maison : le gabarit par defaut de pandoc imprime un bloc
+            # de titre en tete du document, qui ferait doublon avec la page de
+            # garde composee dans la source.
+            "--template=rapport/gabarit.html",
             f"--css={style.name}",
             "--metadata=lang=fr",
-            "--metadata=title=Rapport technique",
             f"--output={destination}",
         ],
         check=True,

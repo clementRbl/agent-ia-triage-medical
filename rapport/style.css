@@ -4,7 +4,7 @@
 
 @page {
   size: A4;
-  margin: 20mm 18mm 18mm 18mm;
+  margin: 17mm 16mm 15mm 16mm;
 }
 
 :root {
@@ -17,13 +17,13 @@
 }
 
 html {
-  font-size: 10.5pt;
+  font-size: 10pt;
 }
 
 body {
-  font-family: "Source Serif 4", "Charter", Georgia, serif;
+  font-family: "Noto Serif", "Liberation Serif", "DejaVu Serif", Georgia, serif;
   color: var(--encre);
-  line-height: 1.45;
+  line-height: 1.38;
   max-width: none;
   margin: 0;
   text-align: justify;
@@ -31,7 +31,7 @@ body {
 }
 
 h1, h2, h3, h4 {
-  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
   line-height: 1.2;
   page-break-after: avoid;
 }
@@ -80,7 +80,7 @@ table {
   margin: 0.7em 0 1em;
   font-size: 9pt;
   page-break-inside: avoid;
-  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", "DejaVu Sans", Arial, sans-serif;
 }
 
 th {
@@ -108,7 +108,7 @@ table.texte td {
 }
 
 code, pre {
-  font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace;
+  font-family: "Liberation Mono", "DejaVu Sans Mono", monospace;
   font-size: 8.5pt;
 }
 
@@ -172,12 +172,12 @@ hr {
 /* Page de titre */
 .titre {
   page-break-after: always;
-  padding-top: 45mm;
+  padding-top: 32mm;
   text-align: left;
 }
 
 .titre .surtitre {
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-size: 10pt;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -192,7 +192,7 @@ hr {
 }
 
 .titre .sous-titre {
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-size: 12.5pt;
   color: var(--gris);
   font-weight: 400;
@@ -200,15 +200,19 @@ hr {
 }
 
 .titre .signature {
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-size: 10pt;
   color: var(--encre);
   line-height: 1.7;
 }
 
+.titre .sous-titre {
+  margin-bottom: 2.2em;
+}
+
 .titre .avertissement {
-  margin-top: 4em;
-  font-family: "Inter", Arial, sans-serif;
+  margin-top: 2.5em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-size: 9pt;
   color: var(--alerte);
   border-left: 2.5px solid var(--alerte);
@@ -223,20 +227,35 @@ hr {
   padding: 8px 12px;
   margin: 0.9em 0;
   page-break-inside: avoid;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
   font-size: 9.5pt;
 }
 
+/* Le sommaire partage la page de garde : seul, il occupait une page entiere
+   pour onze lignes. */
 .sommaire {
-  page-break-after: always;
-  font-family: "Inter", Arial, sans-serif;
-  font-size: 10pt;
+  margin-top: 3.5em;
+  font-family: "Noto Sans", "Liberation Sans", Arial, sans-serif;
+  font-size: 9.5pt;
+  columns: 2;
+  column-gap: 2.5em;
+}
+
+.intitule-sommaire {
+  font-size: 9pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gris);
+  margin-bottom: 0.8em;
+  column-span: all;
 }
 
 .sommaire ol {
-  padding-left: 1.5em;
+  padding-left: 1.4em;
+  margin: 0;
 }
 
 .sommaire li {
-  margin-bottom: 0.3em;
+  margin-bottom: 0.35em;
+  break-inside: avoid;
 }

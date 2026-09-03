@@ -69,7 +69,9 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
       **en attente d'un compte Modal** pour obtenir l'URL publique
 - [x] **L4** — workflows verts : lint, format, types, tests, intégrité des
       données, **et déploiement automatique** depuis `main`
-- [ ] L5 — rapport PDF ≤ 20 pages
+- [x] **L5** — [rapport technique](../rapport/Reboul_Clement_5_Rapport_082026.pdf),
+      **19 pages** sur 20 autorisées, fabriqué de façon reproductible
+      (`uv run python scripts/construire_rapport.py`)
 - [ ] Archive zip nommée selon la convention
 
 ### Ce qui reste et ne dépend pas de moi

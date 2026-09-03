@@ -32,6 +32,11 @@ mlruns/
 mlflow.db
 mlartifacts/
 
+# Rapport : le HTML est un intermediaire de fabrication, le PDF est versionne
+# parce qu'il est le livrable lui-meme.
+rapport/*.html
+!rapport/gabarit.html
+
 # Divers
 .ipynb_checkpoints/
 .DS_Store
