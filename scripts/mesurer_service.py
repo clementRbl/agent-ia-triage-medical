@@ -157,6 +157,7 @@ class Rapport:
     """Resultat complet, destine au rapport final."""
 
     url: str
+    allumage_ms: float = 0.0
     demarrage_a_froid_ms: float = 0.0
     sequentiel: dict[str, Any] = field(default_factory=dict)
     concurrent: dict[str, Any] = field(default_factory=dict)
@@ -173,15 +174,40 @@ class Client:
         self.entetes = {"X-Cle-Api": cle} if cle else {}
         self.delai = delai
 
+    def _client(self) -> httpx.Client:
+        # Les redirections doivent etre suivies : pendant un demarrage a froid,
+        # l'hebergeur repond 303 vers une URL d'attente au lieu de faire
+        # patienter la connexion. Un client qui ne les suit pas voit une erreur
+        # la ou un navigateur verrait la reponse -- et c'est le comportement du
+        # navigateur qui fait foi, puisque c'est celui de l'utilisateur.
+        return httpx.Client(headers=self.entetes, timeout=self.delai, follow_redirects=True)
+
     def triage(self, dossier: dict[str, Any]) -> tuple[float, httpx.Response]:
         debut = time.perf_counter()
-        reponse = httpx.post(
-            f"{self.url}/triage", json=dossier, headers=self.entetes, timeout=self.delai
-        )
+        with self._client() as client:
+            reponse = client.post(f"{self.url}/triage", json=dossier)
         return (time.perf_counter() - debut) * 1000, reponse
 
     def get(self, chemin: str) -> httpx.Response:
-        return httpx.get(f"{self.url}{chemin}", headers=self.entetes, timeout=self.delai)
+        with self._client() as client:
+            return client.get(f"{self.url}{chemin}")
+
+    def attendre_disponibilite(self, delai: float = 600.0) -> float:
+        """Sonde /sante jusqu'a reponse, et renvoie le temps d'allumage.
+
+        Separe la mise en route du conteneur de la latence du premier triage :
+        agreger les deux donnerait un chiffre que rien ne permet d'interpreter.
+        """
+        debut = time.perf_counter()
+        derniere: Exception | None = None
+        while (time.perf_counter() - debut) < delai:
+            try:
+                if self.get("/sante").status_code == 200:
+                    return (time.perf_counter() - debut) * 1000
+            except httpx.HTTPError as erreur:
+                derniere = erreur
+            time.sleep(5.0)
+        raise SystemExit(f"Le service n'a pas répondu en {delai:.0f} s : {derniere}")
 
 
 def mesurer_demarrage(client: Client) -> float:
@@ -278,7 +304,11 @@ def main() -> int:
     client = Client(args.url, os.environ.get("TRIAGE_CLE_API"), args.delai)
     rapport = Rapport(url=client.url)
 
-    print("démarrage à froid…", flush=True)
+    print("allumage du service…", flush=True)
+    rapport.allumage_ms = round(client.attendre_disponibilite(), 1)
+    print(f"  {rapport.allumage_ms} ms")
+
+    print("premier triage (démarrage à froid)…", flush=True)
     rapport.demarrage_a_froid_ms = mesurer_demarrage(client)
     print(f"  {rapport.demarrage_a_froid_ms} ms\n")
 
