@@ -28,9 +28,9 @@ jobs:
       - name: Installer les dependances
         # Le groupe `train` est necessaire ici : sans torch ni transformers, le
         # verificateur de types ne resout pas les imports de src/triage/training
-        # et ce module echapperait au controle. Le cache uv evite de retelecharger
-        # la pile a chaque execution.
-        run: uv sync --group dev --group train
+        # et ce module echapperait au controle. Meme raison pour `api`. Le cache
+        # uv evite de retelecharger la pile a chaque execution.
+        run: uv sync --group dev --group train --group api
 
       - name: Lint
         run: uv run ruff check --output-format=github .
@@ -55,8 +55,9 @@ jobs:
 
       - name: Installer les dependances
         # Les modeles spaCy sont epingles dans pyproject.toml : le cache uv
-        # evite de les retelecharger a chaque execution.
-        run: uv sync --group dev
+        # evite de les retelecharger a chaque execution. `api` reste leger : il
+        # permet de tester le service sans installer torch ni vLLM.
+        run: uv sync --group dev --group api
 
       - name: Tests
         run: uv run pytest -q -m "not integrite"

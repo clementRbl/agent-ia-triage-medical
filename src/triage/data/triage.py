@@ -462,23 +462,45 @@ def _valeur_mesuree(critere: Critere, c: Constantes, langue: str) -> str:
     return f"{intitule} {valeur}{unite}"
 
 
-def _formater_constantes(c: Constantes, langue: str) -> str:
+def formater_constantes(c: Constantes, langue: str) -> str:
+    """Constantes vitales mises en forme ; les valeurs absentes sont omises.
+
+    Le service d'inference recoit des releves partiels -- un patient triage sur
+    un signe de gravite n'a pas encore de temperature. La generation, elle,
+    fournit toujours les sept constantes : sur un releve complet la sortie est
+    identique a celle qui a servi a l'entrainement, ce que verrouille un test.
+    """
     # Les abreviations different d'une langue a l'autre : FC/FR en francais,
     # HR/RR en anglais. Un melange trahirait une traduction bacle.
     fr = langue == "fr"
     pourcent = " %" if fr else "%"
-    # Le francais ecrit la decimale avec une virgule.
-    temperature = f"{c.temperature:.1f}".replace(".", ",") if fr else f"{c.temperature:.1f}"
-    morceaux = [
-        f"{'FC' if fr else 'HR'} {c.frequence_cardiaque}/min",
-        f"{'PA' if fr else 'BP'} {c.pression_systolique}/{c.pression_diastolique} mmHg",
-        f"{'FR' if fr else 'RR'} {c.frequence_respiratoire}/min",
-        f"SpO2 {c.saturation}{pourcent}",
-        f"{'T' if fr else 'Temp'} {temperature} °C",
-        f"Glasgow {c.glasgow}",
-        f"{'EVA' if fr else 'pain'} {c.douleur}/10",
-    ]
+    morceaux: list[str] = []
+
+    if c.frequence_cardiaque is not None:
+        morceaux.append(f"{'FC' if fr else 'HR'} {c.frequence_cardiaque}/min")
+    if c.pression_systolique is not None and c.pression_diastolique is not None:
+        morceaux.append(
+            f"{'PA' if fr else 'BP'} {c.pression_systolique}/{c.pression_diastolique} mmHg"
+        )
+    elif c.pression_systolique is not None:
+        morceaux.append(f"{'PA' if fr else 'BP'} {c.pression_systolique} mmHg")
+    if c.frequence_respiratoire is not None:
+        morceaux.append(f"{'FR' if fr else 'RR'} {c.frequence_respiratoire}/min")
+    if c.saturation is not None:
+        morceaux.append(f"SpO2 {c.saturation}{pourcent}")
+    if c.temperature is not None:
+        # Le francais ecrit la decimale avec une virgule.
+        valeur = f"{c.temperature:.1f}".replace(".", ",") if fr else f"{c.temperature:.1f}"
+        morceaux.append(f"{'T' if fr else 'Temp'} {valeur} °C")
+    if c.glasgow is not None:
+        morceaux.append(f"Glasgow {c.glasgow}")
+    if c.douleur is not None:
+        morceaux.append(f"{'EVA' if fr else 'pain'} {c.douleur}/10")
     return ", ".join(morceaux)
+
+
+def _formater_constantes(c: Constantes, langue: str) -> str:
+    return formater_constantes(c, langue)
 
 
 _CONDUITE: Final[dict[NiveauPriorite, dict[str, str]]] = {
@@ -509,6 +531,70 @@ _LIBELLE_NIVEAU: Final[dict[NiveauPriorite, dict[str, str]]] = {
 }
 
 
+def composer_instruction(
+    langue: str,
+    age: int | None,
+    sexe: str | None,
+    motif: str,
+    symptomes: list[str],
+    antecedents: list[str],
+    constantes: Constantes,
+    duree: str | None = None,
+) -> str:
+    """Redige le prompt de triage, pour l'entrainement comme pour le service.
+
+    Une seule fonction pour les deux usages : si le service composait son
+    prompt de son cote, un ecart de mise en forme suffirait a faire chuter le
+    modele sans que rien ne le signale, et les scores mesures ne vaudraient
+    plus rien. Les champs absents sont omis plutot que remplis de « inconnu »,
+    forme jamais rencontree a l'entrainement.
+    """
+    fr = langue == "fr"
+    lignes: list[str] = []
+
+    if age is not None and sexe is not None:
+        lignes.append(
+            f"Patient de {age} ans, sexe {sexe}." if fr else f"{age}-year-old patient, {sexe}."
+        )
+    elif age is not None:
+        lignes.append(f"Patient de {age} ans." if fr else f"{age}-year-old patient.")
+
+    evolution = ""
+    if duree:
+        evolution = f", évoluant depuis {duree}" if fr else f", ongoing for {duree}"
+    lignes.append(
+        f"Motif de recours : {motif}{evolution}."
+        if fr
+        else f"Presenting complaint: {motif}{evolution}."
+    )
+
+    if symptomes:
+        intitule = "Symptômes rapportés" if fr else "Reported symptoms"
+        lignes.append(
+            f"{intitule} : {', '.join(symptomes)}."
+            if fr
+            else f"{intitule}: {', '.join(symptomes)}."
+        )
+    if antecedents:
+        intitule = "Antécédents" if fr else "Medical history"
+        lignes.append(
+            f"{intitule} : {', '.join(antecedents)}."
+            if fr
+            else f"{intitule}: {', '.join(antecedents)}."
+        )
+    if not constantes.est_vide():
+        intitule = "Constantes à l'admission" if fr else "Vital signs on admission"
+        valeurs = formater_constantes(constantes, langue)
+        lignes.append(f"{intitule} : {valeurs}." if fr else f"{intitule}: {valeurs}.")
+
+    consigne = (
+        "Évaluez le niveau de priorité de triage et justifiez votre évaluation."
+        if fr
+        else "Assess the triage priority level and justify your assessment."
+    )
+    return "\n".join(lignes) + "\n\n" + consigne
+
+
 def _rediger_instruction(
     presentation: Presentation,
     langue: str,
@@ -519,22 +605,15 @@ def _rediger_instruction(
     constantes: Constantes,
     duree: str,
 ) -> str:
-    if langue == "fr":
-        return (
-            f"Patient de {age} ans, sexe {sexe}.\n"
-            f"Motif de recours : {presentation.motif['fr']}, évoluant depuis {duree}.\n"
-            f"Symptômes rapportés : {', '.join(symptomes)}.\n"
-            f"Antécédents : {', '.join(antecedents)}.\n"
-            f"Constantes à l'admission : {_formater_constantes(constantes, 'fr')}.\n\n"
-            "Évaluez le niveau de priorité de triage et justifiez votre évaluation."
-        )
-    return (
-        f"{age}-year-old patient, {sexe}.\n"
-        f"Presenting complaint: {presentation.motif['en']}, ongoing for {duree}.\n"
-        f"Reported symptoms: {', '.join(symptomes)}.\n"
-        f"Medical history: {', '.join(antecedents)}.\n"
-        f"Vital signs on admission: {_formater_constantes(constantes, 'en')}.\n\n"
-        "Assess the triage priority level and justify your assessment."
+    return composer_instruction(
+        langue=langue,
+        age=age,
+        sexe=sexe,
+        motif=presentation.motif[langue],
+        symptomes=symptomes,
+        antecedents=antecedents,
+        constantes=constantes,
+        duree=duree,
     )
 
 
