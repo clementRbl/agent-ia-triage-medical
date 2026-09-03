@@ -14,8 +14,21 @@ au CPU : vLLM y perdrait sa raison d'être et les mesures de latence tout leur
 sens.
 
 Le conteneur s'éteint après cinq minutes sans trafic. Le premier appel qui
-suit paie un démarrage à froid : c'est le prix du coût nul, et le script de
-mesure le rapporte séparément plutôt que de le noyer dans la moyenne.
+suit paie un démarrage à froid de 27 s : c'est le prix du coût nul, et le
+script de mesure le rapporte séparément plutôt que de le noyer dans la moyenne.
+
+### Le GPU se choisit sur mesure
+
+`TRIAGE_GPU` vaut `A10G` par défaut. Le T4, moins cher, a été mesuré puis
+écarté :
+
+| GPU | Médiane séquentielle | p95 sous charge |
+| --- | --- | --- |
+| T4 | 8 046 ms | 23 040 ms |
+| **A10G** | **2 051 ms** | **2 675 ms** |
+
+Le T4 ne gère ni bfloat16 ni FlashAttention 2, et sa bande passante mémoire est
+2,4 fois inférieure. Une p95 à 23 secondes serait inutilisable à un guichet.
 
 ## Mise en service, une fois
 
@@ -79,6 +92,18 @@ sur `main`. À renseigner dans **Settings → Secrets and variables → Actions*
 
 Aucun secret n'entre dans l'image ni dans le dépôt : ils sont injectés à
 l'exécution.
+
+**Rotation.** Pour remplacer la clé d'appel :
+
+```bash
+nouvelle=$(python -c 'import secrets; print(secrets.token_urlsafe(32))')
+uv run modal secret create triage-secrets TRIAGE_CLES_API="$nouvelle" --force
+gh secret set TRIAGE_CLE_API --body "$nouvelle"
+uv run modal deploy deploiement/modal_app.py
+```
+
+Les jetons Modal se régénèrent depuis <https://modal.com/settings/tokens>, le
+jeton Hugging Face depuis <https://huggingface.co/settings/tokens>.
 
 Tant que `MODAL_TOKEN_ID` et `MODAL_TOKEN_SECRET` ne sont pas renseignés, le
 workflow **s'arrête avec un avertissement plutôt qu'en échec** : rien n'est

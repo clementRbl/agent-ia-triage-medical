@@ -20,6 +20,18 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import Final
+
+# Ce que l'entrainement laisse dans le dossier mais qui n'a rien a faire dans
+# un modele publie :
+#   ref/            l'adaptateur de reference du DPO, copie du SFT. Il double
+#                   la taille du depot et PEFT le chargerait comme un
+#                   sous-modele s'il le trouvait.
+#   training_args.* un pickle des arguments d'entrainement. Inutile a
+#                   l'inference, et telecharger un pickle depuis un depot
+#                   public revient a executer du code qu'on n'a pas lu.
+# `delete_patterns` les retire aussi d'une publication anterieure.
+EXCLUS: Final[tuple[str, ...]] = ("ref/*", "training_args.bin", "optimizer.pt")
 
 CARTE = """---
 license: apache-2.0
@@ -175,6 +187,8 @@ def main() -> int:
         folder_path=str(args.adaptateur),
         repo_id=args.depot,
         repo_type="model",
+        ignore_patterns=list(EXCLUS),
+        delete_patterns=list(EXCLUS),
         commit_message="Adaptateur LoRA de triage, aligné par préférences",
     )
     print(f"publié : https://huggingface.co/{args.depot}")

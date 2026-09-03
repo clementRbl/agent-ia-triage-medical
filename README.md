@@ -78,6 +78,9 @@ triage non vérifié.
 `Qwen3-1.7B-Base` spécialisé par **SFT + LoRA** puis aligné par **DPO**.
 Adaptateurs de 67 Mo chacun, entraînés sur une RTX 3080 de 10 Go.
 
+Adaptateur publié :
+**[ClementRbl/triage-chsa-qwen3-1.7b](https://huggingface.co/ClementRbl/triage-chsa-qwen3-1.7b)**
+
 **Jeu de test** — 99 cas, motifs de recours vus à l'entraînement :
 
 | | Base | SFT | **SFT + DPO** |
@@ -117,14 +120,26 @@ uv run python scripts/intervalles_confiance.py
 uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
-## Service
+## Service déployé
+
+**<https://clement-rbl--triage-chsa-service.modal.run>** — endpoint servi par
+vLLM sur GPU, protégé par l'en-tête `X-Cle-Api`.
+
+| | Médiane | p95 |
+|---|---|---|
+| Séquentiel (30 appels) | 2 051 ms | 2 560 ms |
+| 8 requêtes en parallèle | 2 172 ms | 2 675 ms |
+
+Huit requêtes simultanées ne coûtent que **6 % de latence médiane** : c'est
+l'apport du traitement par lots continu de vLLM.
 
 ```bash
 # en local, sans GPU : le barème répond à la place du modèle
 TRIAGE_MOTEUR=regles uv run uvicorn triage.api.app:app --reload --port 8080
 
-# mesures sur un service déployé : latence, robustesse, traçabilité
-uv run python scripts/mesurer_service.py --url https://<endpoint>
+# mesures sur le service déployé : latence, robustesse, traçabilité
+TRIAGE_CLE_API=<clé> uv run python scripts/mesurer_service.py \
+  --url https://clement-rbl--triage-chsa-service.modal.run
 ```
 
 Trois dispositifs de sécurité, chacun couvert par des tests :
@@ -148,9 +163,9 @@ Documentation interactive de l'API sur `/docs`, procédure complète dans
 | 1 | Préparation des données | ✅ 5 000 paires SFT + 3 000 paires DPO, anonymisées |
 | 2 | Fine-tuning supervisé (SFT + LoRA) | ✅ 92,93 % d'exactitude, 0 urgence manquée |
 | 3 | Alignement par préférences (DPO) | ✅ trois runs, ablation concluante |
-| 4 | Déploiement et validation | ✅ service, Docker, Modal, livraison continue, mesures — reste l'URL publique |
+| 4 | Déploiement et validation | ✅ endpoint public mesuré, Docker, livraison continue |
 | 4 | Évaluation élargie | ✅ 600 cas, 200 urgences, intervalles de confiance |
-| — | Rapport technique (L5) | ⏳ |
+| — | Rapport technique (L5) | ✅ [20 pages](rapport/Reboul_Clement_5_Rapport_082026.pdf) |
 
 Décisions techniques et points ouverts :
 [docs/99-decisions.md](docs/99-decisions.md).

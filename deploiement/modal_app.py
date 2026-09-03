@@ -30,9 +30,21 @@ APPLICATION = "triage-chsa"
 # Modele de base et adaptateur, tous deux tires du Hub au demarrage. Les
 # epingler par revision serait preferable en production : une image qui
 # resout « derniere version » ne se redeploie pas a l'identique.
+#
+# Ces valeurs sont lues **au deploiement**, sur le poste qui lance la commande,
+# puis inscrites dans l'environnement de l'image (voir `.env` plus bas). Sans
+# cela le conteneur, qui reevalue ce module a son demarrage, ne verrait aucune
+# de ces variables et repartirait sur ses valeurs par defaut.
 MODELE_BASE = os.environ.get("TRIAGE_MODELE_BASE", "Qwen/Qwen3-1.7B-Base")
 ADAPTATEUR = os.environ.get("TRIAGE_ADAPTATEUR", "")
+
+# Deux noms distincts, et c'est delibere : le modele de base et le modele
+# affine ne doivent jamais repondre sous la meme etiquette. S'ils la
+# partageaient et que l'adaptateur venait a manquer, vLLM servirait le modele
+# nu sous le nom du modele affine -- il repondrait, de facon plausible, et
+# fausse. Avec deux noms, la meme situation produit une erreur franche.
 NOM_SERVI = "triage-qwen3-1.7b"
+NOM_BASE = "qwen3-base"
 
 PORT_VLLM = 8000
 URL_VLLM = f"http://127.0.0.1:{PORT_VLLM}"
@@ -44,6 +56,15 @@ RANG_LORA = 16
 # Delai de patience au demarrage : le telechargement des poids depuis le Hub
 # peut prendre plusieurs minutes lors du tout premier demarrage a froid.
 DELAI_DEMARRAGE_S = 600
+
+# GPU. Mesure a l'appui, le T4 rend une latence mediane de 8,0 s la ou un A10G
+# descend nettement plus bas : sa generation ne gere ni bfloat16 ni
+# FlashAttention 2 -- vLLM retombe sur un noyau d'attention lent -- et sa bande
+# passante memoire est 2,4 fois inferieure, ce qui domine en generation.
+# L'A10G consomme davantage de credits a l'heure, mais le conteneur s'eteint
+# apres cinq minutes d'inactivite : sur un POC sollicite par intermittence, la
+# depense reelle reste tres en deca des 30 $ mensuels.
+GPU = os.environ.get("TRIAGE_GPU", "A10G")
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -70,6 +91,14 @@ image = (
     # Le code du service est embarque tel quel : l'image deployee et le depot
     # portent la meme revision, ce que /version rend verifiable.
     .add_local_python_source("triage", copy=True)
+    # Fige dans l'image la configuration lue au deploiement.
+    .env(
+        {
+            "TRIAGE_MODELE_BASE": MODELE_BASE,
+            "TRIAGE_ADAPTATEUR": ADAPTATEUR,
+            "TRIAGE_GPU": GPU,
+        }
+    )
 )
 
 app = modal.App(APPLICATION, image=image)
@@ -87,8 +116,8 @@ poids = modal.Volume.from_name("triage-poids", create_if_missing=True)
 secrets = [modal.Secret.from_name("triage-secrets", required_keys=["TRIAGE_CLES_API"])]
 
 
-def _commande_vllm() -> list[str]:
-    commande = [
+def _commande_vllm(adaptateur: str) -> list[str]:
+    return [
         "vllm",
         "serve",
         MODELE_BASE,
@@ -97,7 +126,7 @@ def _commande_vllm() -> list[str]:
         "--port",
         str(PORT_VLLM),
         "--served-model-name",
-        NOM_SERVI,
+        NOM_BASE,
         # Le POC sert des tableaux cliniques courts ; reserver 40 000 tokens de
         # contexte immobiliserait de la memoire pour rien.
         "--max-model-len",
@@ -110,16 +139,12 @@ def _commande_vllm() -> list[str]:
         "16",
         "--gpu-memory-utilization",
         "0.90",
+        "--enable-lora",
+        "--max-lora-rank",
+        str(RANG_LORA),
+        "--lora-modules",
+        f"{NOM_SERVI}={adaptateur}",
     ]
-    if ADAPTATEUR:
-        commande += [
-            "--enable-lora",
-            "--max-lora-rank",
-            str(RANG_LORA),
-            "--lora-modules",
-            f"{NOM_SERVI}={ADAPTATEUR}",
-        ]
-    return commande
 
 
 def _attendre_vllm(delai: int = DELAI_DEMARRAGE_S) -> None:
@@ -143,11 +168,28 @@ def _attendre_vllm(delai: int = DELAI_DEMARRAGE_S) -> None:
     raise RuntimeError(f"vLLM n'a pas démarré en {delai} s ; dernière erreur : {derniere_erreur}")
 
 
+def _verifier_adaptateur_servi() -> None:
+    """Refuse de servir si le modele affine n'apparait pas dans vLLM.
+
+    Un adaptateur qui ne se charge pas ne fait pas echouer vLLM : le serveur
+    demarre, sert le modele de base et repond a tout. C'est exactement le genre
+    de panne qu'aucune sonde de vivacite ne detecte, et qui produit des
+    reponses plausibles et fausses.
+    """
+    import httpx
+
+    reponse = httpx.get(f"{URL_VLLM}/v1/models", timeout=30)
+    reponse.raise_for_status()
+    disponibles = [modele["id"] for modele in reponse.json()["data"]]
+    if NOM_SERVI not in disponibles:
+        raise RuntimeError(
+            f"L'adaptateur {NOM_SERVI!r} n'est pas servi par vLLM. "
+            f"Modèles disponibles : {disponibles}"
+        )
+
+
 @app.function(
-    gpu="T4",
-    # Le T4 suffit pour 1,7 milliard de parametres en bfloat16 et coute le
-    # moins cher des GPU disponibles : environ 187 heures dans les 30 $
-    # mensuels du plan gratuit.
+    gpu=GPU,
     volumes={"/journal": journal, "/root/.cache/huggingface": poids},
     secrets=secrets,
     timeout=3600,
@@ -160,12 +202,23 @@ def _attendre_vllm(delai: int = DELAI_DEMARRAGE_S) -> None:
 @modal.asgi_app()
 def service() -> Any:
     """Expose l'API FastAPI, adossee au vLLM local."""
+    adaptateur = os.environ.get("TRIAGE_ADAPTATEUR", "")
+    if not adaptateur:
+        # Mieux vaut ne pas demarrer que servir le modele nu : il repondrait
+        # de facon plausible sans rien connaitre du bareme de triage.
+        raise RuntimeError(
+            "TRIAGE_ADAPTATEUR est vide. Déployez avec "
+            "TRIAGE_ADAPTATEUR=<compte>/<dépôt> pour que l'adaptateur entraîné "
+            "soit servi."
+        )
+
     os.environ["VLLM_BASE_URL"] = URL_VLLM
     os.environ["VLLM_MODELE"] = NOM_SERVI
     os.environ["TRIAGE_JOURNAL"] = "/journal/journal_triage.jsonl"
 
-    subprocess.Popen(_commande_vllm())
+    subprocess.Popen(_commande_vllm(adaptateur))
     _attendre_vllm()
+    _verifier_adaptateur_servi()
 
     from triage.api.app import app as application
 

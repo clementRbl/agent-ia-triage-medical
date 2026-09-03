@@ -61,12 +61,12 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 ## Checklist de rendu
 
 - [x] **L1** — dataset versionné en parquet + [carte documentée](../data/processed/README.md)
-- [x] **L2** — adaptateurs LoRA SFT et DPO, métriques, hyperparamètres et graine
-      consignés ; script de publication prêt (`scripts/publier_modele.py`),
-      **en attente d'un jeton Hugging Face**
-- [~] **L3** — service complet et testé (questionnaire adaptatif, garde-fou,
-      journal d'audit, image Docker, application Modal, script de mesure) ;
-      **en attente d'un compte Modal** pour obtenir l'URL publique
+- [x] **L2** — adaptateur publié sur
+      [ClementRbl/triage-chsa-qwen3-1.7b](https://huggingface.co/ClementRbl/triage-chsa-qwen3-1.7b),
+      67 Mo, avec sa carte de modèle, ses métriques et ses limites d'usage
+- [x] **L3** — endpoint déployé et mesuré :
+      <https://clement-rbl--triage-chsa-service.modal.run>
+      (protégé par clé, latence p95 2 560 ms, journal d'audit persistant)
 - [x] **L4** — workflows verts : lint, format, types, tests, intégrité des
       données, **et déploiement automatique** depuis `main`
 - [x] **L5** — [rapport technique](../rapport/Reboul_Clement_5_Rapport_082026.pdf),
@@ -74,11 +74,12 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
       (`uv run python scripts/construire_rapport.py`)
 - [ ] Archive zip nommée selon la convention
 
-### Ce qui reste et ne dépend pas de moi
+### Adresses des livrables en ligne
 
-| Sujet | Action | Coût |
-|---|---|---|
-| Publication des poids (L2) | jeton d'écriture Hugging Face | gratuit |
-| URL de l'endpoint (L3) | compte Modal, plan Starter | gratuit, sans carte bancaire |
+| Livrable | Adresse |
+|---|---|
+| L2 — modèle | <https://huggingface.co/ClementRbl/triage-chsa-qwen3-1.7b> |
+| L3 — endpoint | <https://clement-rbl--triage-chsa-service.modal.run> |
 
-Les deux procédures sont détaillées dans [`deploiement/README.md`](../deploiement/README.md).
+L'endpoint exige l'en-tête `X-Cle-Api`. Procédure complète et rotation des
+secrets : [`deploiement/README.md`](../deploiement/README.md).

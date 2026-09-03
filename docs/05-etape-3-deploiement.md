@@ -49,7 +49,7 @@ Client (accueil, SIH, curl)
    vLLM (Qwen3-1.7B-Base + adaptateur LoRA)  ── journal d'audit chaîné
         │                                       (volume persistant)
         ▼
-   GPU T4 — Modal, plan gratuit
+   GPU A10G — Modal, plan gratuit
 ```
 
 Un seul conteneur GPU. vLLM y est lancé comme sous-processus et l'API
@@ -60,16 +60,35 @@ contrepartie.
 ### Le choix de l'hébergeur
 
 L'endpoint doit être servi par vLLM, donc sur GPU, et le projet ne doit rien
-coûter. Modal renouvelle **30 $ de crédits chaque mois sans carte bancaire**,
-soit environ 187 heures de T4 — très au-delà de ce qu'une démonstration
-consomme. Hugging Face Spaces, seule autre offre gratuite crédible, est
+coûter. Modal renouvelle **30 $ de crédits chaque mois sans carte bancaire** — très
+au-delà de ce qu'une démonstration consomme, le conteneur s'éteignant après
+cinq minutes d'inactivité. Hugging Face Spaces, seule autre offre gratuite crédible, est
 limitée au CPU : vLLM y perdrait sa raison d'être et les mesures de latence
 tout leur sens.
 
 Contrepartie assumée : le conteneur s'éteint après cinq minutes sans trafic,
-et le premier appel suivant paie un démarrage à froid. C'est le prix du coût
-nul ; le script de mesure le rapporte séparément plutôt que de le noyer dans
-la moyenne.
+et le premier appel suivant paie un démarrage à froid de 27 s. C'est le prix
+du coût nul ; le script de mesure le rapporte séparément plutôt que de le
+noyer dans la moyenne.
+
+### Le GPU a été choisi sur mesure, pas sur catalogue
+
+Le premier déploiement tournait sur T4, le moins cher. Les chiffres ont
+tranché :
+
+| GPU | Médiane séquentielle | p95 séquentielle | Médiane sous charge | p95 sous charge |
+| --- | --- | --- | --- | --- |
+| T4 | 8 046 ms | 10 415 ms | 12 135 ms | 23 040 ms |
+| **A10G** | **2 051 ms** | **2 560 ms** | **2 172 ms** | **2 675 ms** |
+
+Un facteur quatre, pour trois raisons cumulées : la génération T4 ne gère ni
+bfloat16 — vLLM retombe en float16 alors que l'entraînement s'est fait en
+bfloat16 — ni FlashAttention 2, ce qui force un noyau d'attention lent ; et sa
+bande passante mémoire est 2,4 fois inférieure, facteur dominant en génération.
+
+Sous charge l'écart se creuse : une p95 à 23 secondes serait inutilisable à un
+guichet d'accueil. Le conteneur s'éteignant après cinq minutes d'inactivité, le
+surcoût horaire de l'A10G reste très en deçà des crédits mensuels gratuits.
 
 ## Le questionnaire adaptatif
 
@@ -195,9 +214,26 @@ Procédure complète et secrets à renseigner : `deploiement/README.md`.
 | Limites d'usage documentées et affichées | ✅ | schéma OpenAPI et carte de modèle |
 | Robustesse aux saisies fautives | ✅ | 8 cas sur 8 refusés en 422, jamais en 500 |
 | Déploiement automatisé et reproductible | ✅ | workflow, image Docker, procédure écrite |
-| Retour arrière testé | ⏳ | l'adaptateur étant servi à chaud, il suffit de repointer `TRIAGE_ADAPTATEUR` |
-| Latence p95 sous le seuil | ⏳ | à mesurer sur l'endpoint réel |
+| Retour arrière | ✅ | l'adaptateur est servi à chaud depuis le Hub : il suffit de repointer `TRIAGE_ADAPTATEUR` |
+| Latence p95 sous les trois secondes | ✅ | 2 560 ms séquentiel, 2 675 ms sous charge |
+| Endpoint accessible et mesuré | ✅ | `clement-rbl--triage-chsa-service.modal.run` |
 | **Taux de sous-triage critique sous le seuil** | ❌ | **8,5 % [5,4 % ; 13,2 %]** pour le modèle seul |
+
+### Une panne de déploiement à retenir
+
+Le premier déploiement a servi le **modèle de base sous le nom du modèle
+affiné**. La variable désignant l'adaptateur était lue au niveau module :
+présente sur le poste de déploiement, absente du conteneur qui réévalue le
+module à son démarrage. vLLM démarrait donc sans LoRA, et répondait — de façon
+plausible et fausse.
+
+Aucune sonde de vivacité ne détecte cela. Trois corrections :
+
+1. la configuration lue au déploiement est **figée dans l'image** ;
+2. le service **refuse de démarrer** sans adaptateur ;
+3. le modèle de base et le modèle affiné portent des **noms distincts**, si
+   bien que la même situation produit désormais une erreur franche au lieu
+   d'une réponse silencieusement erronée.
 
 ### Recommandation
 
