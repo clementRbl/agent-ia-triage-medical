@@ -82,7 +82,9 @@ Le jeu de test réutilise les douze motifs de recours de l'entraînement : un
 modèle peut y exceller en retenant la forme des cas. Six motifs supplémentaires
 — crise convulsive, hémorragie digestive, brûlure, intoxication médicamenteuse,
 douleur scrotale aiguë, polytraumatisme — n'entrent **jamais** dans
-l'entraînement et servent uniquement à l'évaluation.
+l'entraînement et servent uniquement à l'évaluation. *(Ces motifs réservés sont
+passés à quatorze lors de l'élargissement décrit en 4 bis ; les chiffres de
+cette section portent sur les six d'origine.)*
 
 | | Motifs vus | Motifs inédits |
 |---|---|---|
@@ -227,6 +229,75 @@ Avec 40 urgences évaluées, l'intervalle de confiance du taux de sous-triage
 critique s'étend de 5,5 % à 26,1 %. **Aucun seuil d'acceptation clinique ne peut
 être fixé sur une telle imprécision.** Élargir le jeu d'évaluation clinique est
 donc un prérequis au go/no-go, avant toute autre optimisation du modèle.
+
+## 4 bis. Jeu d'évaluation élargi — la mesure qui compte
+
+### Dimensionnement
+
+La taille n'a pas été choisie au jugé mais calculée, avant production, à partir
+de la précision visée (`cas_necessaires`, `src/triage/training/statistiques.py`) :
+
+| Précision visée | Urgences requises | Cas au total |
+|---|---|---|
+| ± 10 points *(situation antérieure)* | 43 | 129 |
+| **± 5 points** | **169** | **~507** |
+| ± 3 points | 467 | 1 401 |
+
+**Cible retenue : 600 cas, soit 200 urgences maximales.**
+
+Multiplier le volume sur six motifs n'aurait fait que répéter six tableaux. Huit
+motifs de recours ont donc été ajoutés — colique néphrétique, douleur du mollet,
+hypoglycémie, douleur pelvienne, épistaxis, agitation, rétention urinaire,
+éruption fébrile — portant les **motifs réservés de 6 à 14**, toujours sans
+aucun recouvrement avec l'entraînement (propriété verrouillée par test).
+
+Composition obtenue : 600 cas, **200 par niveau**, 355 fr / 245 en, les 14
+motifs représentés.
+
+> **Défaut corrigé au passage.** Le script d'évaluation forçait 120 cas par une
+> valeur codée en dur qui masquait la constante prévue à cet effet. Le premier
+> run « élargi » a donc mesuré 120 cas sans le signaler. C'est exactement le
+> type de panne silencieuse que le reste du projet cherche à rendre impossible ;
+> la constante fait désormais foi.
+
+### Résultats sur 600 cas
+
+| | SFT | SFT + DPO (ablation) |
+|---|---|---|
+| Exactitude | 89,50 % **[86,79 – 91,71]** | 90,17 % **[87,52 – 92,30]** |
+| Sous-triage global | 5,83 % | 5,67 % |
+| Sur-triage | 4,67 % | 4,17 % |
+| Sans niveau exploitable | 0,00 % | 0,00 % |
+| **Sous-triage critique** | **8,50 %** [5,37 – 13,19] — 17/200 | **8,50 %** [5,37 – 13,19] — 17/200 |
+
+Comparaison appariée sur les 600 mêmes cas : 5 cas gagnés par le SFT, 9 par le
+modèle aligné, **p = 0,42**. L'écart n'est toujours pas significatif, mais il
+est désormais mesuré avec une précision qui permet de le dire.
+
+### Ce que le petit échantillon cachait
+
+| | 40 urgences | 200 urgences |
+|---|---|---|
+| Sous-triage critique apparent | **2,5 %** | **8,5 %** |
+| Intervalle de confiance | [0,4 % – 12,9 %] | [5,4 % – 13,2 %] |
+
+Le premier chiffre n'était pas faux — il était imprécis. La vraie valeur était
+dans son intervalle depuis le début ; c'est l'intervalle qui était trop large
+pour qu'on puisse en tirer quoi que ce soit. **Un seuil d'acceptation fixé sur
+les 120 cas aurait été fixé sur du bruit.**
+
+C'est l'argument le plus solide du projet en faveur de la mesure d'incertitude :
+sans elle, on aurait déployé en croyant à 2,5 % de sous-triage critique.
+
+### Conséquence pour le service
+
+Un sous-triage critique de 8,5 % signifie que **17 urgences vitales sur 200
+seraient classées en priorité moindre** par le modèle servi seul. Aucun service
+d'urgences ne l'accepterait.
+
+C'est ce qui a dicté l'architecture de la semaine 4 : le modèle est **doublé
+d'un barème explicite** qui relève la priorité quand le modèle annonce moins
+grave que les constantes ne le justifient (cf. `docs/05-etape-3-deploiement.md`).
 
 ## 5. Modèle retenu et attribution des gains
 

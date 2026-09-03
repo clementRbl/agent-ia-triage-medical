@@ -24,7 +24,8 @@ Modèle : **Qwen3-1.7B-Base**, spécialisé par **SFT + LoRA** puis aligné par
 | [data/processed/README.md](data/processed/README.md) | Carte du jeu de données produit (schéma, volumes, licences, limites) |
 | [docs/04-etape-2-sft-dpo.md](docs/04-etape-2-sft-dpo.md) | SFT + LoRA, alignement DPO, métriques |
 | [docs/04b-resultats-entrainement.md](docs/04b-resultats-entrainement.md) | Résultats mesurés : SFT, évaluation clinique, investigation DPO |
-| [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Docker, FastAPI, vLLM, CI/CD, go/no-go |
+| [docs/05-etape-3-deploiement.md](docs/05-etape-3-deploiement.md) | Architecture du service, garde-fou, traçabilité, go/no-go |
+| [deploiement/README.md](deploiement/README.md) | Procédure de déploiement, secrets, routes de l'API |
 | [docs/06-glossaire.md](docs/06-glossaire.md) | Bases théoriques SFT / DPO et glossaire |
 | [docs/99-decisions.md](docs/99-decisions.md) | Journal des décisions techniques |
 
@@ -58,24 +59,44 @@ uv run pytest
 
 ## Intégration continue
 
-Trois jobs GitHub Actions sur chaque PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)) :
+Trois jobs sur chaque PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)) :
 
 | Job | Contrôle |
 |---|---|
-| Lint et format | `ruff check` + `ruff format --check` sur tout le dépôt, notebooks compris |
-| Tests | suite unitaire |
+| Lint, format et types | `ruff check`, `ruff format --check` et `ty check` sur tout le dépôt, notebooks compris |
+| Tests | 196 tests unitaires |
 | Intégrité du jeu de données | empreintes des manifestes, seuil de PII résiduelle, absence de fuite entre les jeux |
+
+Un quatrième workflow ([deploiement.yml](.github/workflows/deploiement.yml))
+redéploie depuis `main` quand la CI y est verte, puis mesure latence,
+robustesse et traçabilité sur le service déployé. Livrer une version dont les
+tests n'ont pas été rejoués reviendrait à mettre en service un modèle de
+triage non vérifié.
 
 ## Modèle
 
 `Qwen3-1.7B-Base` spécialisé par **SFT + LoRA** puis aligné par **DPO**.
 Adaptateurs de 67 Mo chacun, entraînés sur une RTX 3080 de 10 Go.
 
-| Sur 99 cas de triage jamais vus | Base | SFT | **SFT + DPO** |
+**Jeu de test** — 99 cas, motifs de recours vus à l'entraînement :
+
+| | Base | SFT | **SFT + DPO** |
 |---|---|---|---|
 | Exactitude | 0 % | 91,92 % | **92,93 %** |
 | Sur-triage | — | 4,04 % | **3,03 %** |
 | Urgences vitales identifiées | 0/31 | 31/31 | **31/31** |
+
+**Jeu de généralisation** — 600 cas, 200 urgences, 14 motifs *jamais vus* :
+
+| | SFT | **SFT + DPO** |
+|---|---|---|
+| Exactitude | 89,50 % [86,8 – 91,7] | **90,17 %** [87,5 – 92,3] |
+| **Sous-triage critique** | 8,50 % [5,4 – 13,2] | **8,50 %** [5,4 – 13,2] |
+
+L'écart entre les deux modèles n'est pas significatif (test apparié, p = 0,42).
+Le chiffre qui compte est le second : **17 urgences vitales sur 200 sont
+annoncées à un niveau moindre**. C'est pourquoi le service ne sert jamais le
+modèle seul — un barème explicite relève la priorité en cas de désaccord.
 
 Résultats détaillés, échecs compris :
 [docs/04b-resultats-entrainement.md](docs/04b-resultats-entrainement.md).
@@ -89,9 +110,36 @@ uv run python -c "from triage.training.dpo import entrainer_dpo; entrainer_dpo()
 uv run python scripts/evaluer_triage.py --dpo
 uv run python scripts/evaluer_triage.py --dpo --generalisation
 
+# intervalles de confiance et comparaison appariée des deux modèles
+uv run python scripts/intervalles_confiance.py
+
 # suivi des runs
 uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
+
+## Service
+
+```bash
+# en local, sans GPU : le barème répond à la place du modèle
+TRIAGE_MOTEUR=regles uv run uvicorn triage.api.app:app --reload --port 8080
+
+# mesures sur un service déployé : latence, robustesse, traçabilité
+uv run python scripts/mesurer_service.py --url https://<endpoint>
+```
+
+Trois dispositifs de sécurité, chacun couvert par des tests :
+
+- **Questionnaire adaptatif** — les signes de gravité dépistés dépendent du
+  motif, et le recueil s'arrête dès qu'un critère d'urgence maximale est
+  rempli. La règle d'arrêt est déterministe, jamais laissée au modèle.
+- **Garde-fou** — quand le modèle annonce moins grave que le barème, la
+  priorité est relevée et l'écart consigné. Quand il annonce plus grave, sa
+  prudence est conservée.
+- **Journal chaîné** — chaque entrée porte l'empreinte de la précédente.
+  Modification, suppression, insertion et réordonnancement sont détectés.
+
+Documentation interactive de l'API sur `/docs`, procédure complète dans
+[deploiement/README.md](deploiement/README.md).
 
 ## État d'avancement
 
@@ -100,7 +148,9 @@ uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 | 1 | Préparation des données | ✅ 5 000 paires SFT + 3 000 paires DPO, anonymisées |
 | 2 | Fine-tuning supervisé (SFT + LoRA) | ✅ 92,93 % d'exactitude, 0 urgence manquée |
 | 3 | Alignement par préférences (DPO) | ✅ trois runs, ablation concluante |
-| 4 | Déploiement et validation | ⏳ Docker, FastAPI, vLLM, cloud |
+| 4 | Déploiement et validation | ✅ service, Docker, Modal, livraison continue, mesures — reste l'URL publique |
+| 4 | Évaluation élargie | ✅ 600 cas, 200 urgences, intervalles de confiance |
+| — | Rapport technique (L5) | ⏳ |
 
 Décisions techniques et points ouverts :
 [docs/99-decisions.md](docs/99-decisions.md).

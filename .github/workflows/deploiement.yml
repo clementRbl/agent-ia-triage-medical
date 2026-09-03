@@ -23,7 +23,7 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verifier la presence des secrets
         # Sans ce controle, l'absence d'un jeton se manifesterait par une
@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Installer uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -66,10 +66,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: deployer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Installer uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -93,7 +93,7 @@ jobs:
 
       - name: Conserver les mesures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mesures-service
           path: outputs/mesures_service.json

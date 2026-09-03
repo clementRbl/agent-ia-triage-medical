@@ -62,16 +62,21 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 
 - [x] **L1** — dataset versionné en parquet + [carte documentée](../data/processed/README.md)
 - [x] **L2** — adaptateurs LoRA SFT et DPO, métriques, hyperparamètres et graine
-      consignés ; reste à choisir le mode de publication des poids
-- [ ] L3 — URL de l'endpoint accessible + doc d'API
-- [x] **L4** — workflows `.github/workflows/` verts (lint, format, types, tests,
-      intégrité des données) ; reste à ajouter le déploiement
+      consignés ; script de publication prêt (`scripts/publier_modele.py`),
+      **en attente d'un jeton Hugging Face**
+- [~] **L3** — service complet et testé (questionnaire adaptatif, garde-fou,
+      journal d'audit, image Docker, application Modal, script de mesure) ;
+      **en attente d'un compte Modal** pour obtenir l'URL publique
+- [x] **L4** — workflows verts : lint, format, types, tests, intégrité des
+      données, **et déploiement automatique** depuis `main`
 - [ ] L5 — rapport PDF ≤ 20 pages
 - [ ] Archive zip nommée selon la convention
 
-### Points ouverts sur les livrables
+### Ce qui reste et ne dépend pas de moi
 
-| Sujet | Décision attendue |
-|---|---|
-| Hébergement de l'endpoint (L3) | RunPod / Scaleway / autre |
-| Publication des poids (L2) | Hugging Face Hub ou pièce jointe — 134 Mo au total, trop pour un dépôt git ordinaire |
+| Sujet | Action | Coût |
+|---|---|---|
+| Publication des poids (L2) | jeton d'écriture Hugging Face | gratuit |
+| URL de l'endpoint (L3) | compte Modal, plan Starter | gratuit, sans carte bancaire |
+
+Les deux procédures sont détaillées dans [`deploiement/README.md`](../deploiement/README.md).
