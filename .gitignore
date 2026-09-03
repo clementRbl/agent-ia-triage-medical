@@ -37,6 +37,9 @@ mlartifacts/
 rapport/*.html
 !rapport/gabarit.html
 
+# Notes personnelles de preparation : hors du depot.
+notes/
+
 # Divers
 .ipynb_checkpoints/
 .DS_Store
