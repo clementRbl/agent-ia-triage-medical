@@ -11,6 +11,8 @@ commande_vllm=(
   --port 8000
   --served-model-name "${VLLM_MODELE}"
   --max-model-len 2048
+  # Voir modal_app.py : le prechauffage sur 256 requetes sature un petit GPU.
+  --max-num-seqs 16
   --gpu-memory-utilization 0.90
 )
 

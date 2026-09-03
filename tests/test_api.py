@@ -236,3 +236,54 @@ class TestProtection:
     def test_la_sonde_de_sante_reste_ouverte(self, client_protege):
         """L'hebergeur doit pouvoir la joindre sans partager le secret."""
         assert client_protege.get("/sante").status_code == 200
+
+
+class TestChargeVLLM:
+    """Reglages de la requete envoyee a vLLM.
+
+    Ils ne se voient pas a l'usage courant mais conditionnent la validite de
+    tout ce qui est mesure : un seul d'entre eux qui change en silence, et les
+    scores rapportes ne decrivent plus le service rendu.
+    """
+
+    @pytest.fixture
+    def moteur(self):
+        from triage.api.moteur import MoteurVLLM
+
+        return MoteurVLLM(base_url="http://exemple.invalide", modele="triage")
+
+    def test_la_generation_est_deterministe(self, moteur):
+        assert moteur.charge("cas")["temperature"] == 0.0
+
+    def test_le_mode_raisonnement_est_desactive(self, moteur):
+        """L'entrainement a ete conduit ainsi ; servir autrement change la sortie."""
+        assert moteur.charge("cas")["chat_template_kwargs"] == {"enable_thinking": False}
+
+    def test_la_generation_s_arrete_a_la_cloture(self, moteur):
+        """Qwen3-Base n'a pas appris a emettre la fin de tour du gabarit.
+
+        Sans borne d'arret, il enchaîne sur un second tour inventé et la
+        réponse servie devient inexploitable.
+        """
+        from triage.api.moteur import CLOTURES, JETON_FIN_DE_TOUR
+
+        charge = moteur.charge("cas")
+        assert charge["stop_token_ids"] == [JETON_FIN_DE_TOUR]
+        assert charge["stop"] == list(CLOTURES)
+        assert charge["include_stop_str_in_output"] is True
+
+    def test_les_clotures_couvrent_les_deux_langues(self):
+        """Une borne d'arret manquante dans une langue la laisserait dégénérer."""
+        from triage.api.moteur import CLOTURES
+        from triage.data.triage import rediger_reponse
+        from triage.schema import Constantes, NiveauPriorite
+
+        for langue in ("fr", "en"):
+            reponse = rediger_reponse(
+                NiveauPriorite.DIFFEREE, [], Constantes(saturation=99), langue
+            )
+            assert any(reponse.rstrip().endswith(c) for c in CLOTURES), langue
+
+    def test_l_instruction_est_transmise_telle_quelle(self, moteur):
+        charge = moteur.charge("Patient de 40 ans.")
+        assert charge["messages"] == [{"role": "user", "content": "Patient de 40 ans."}]

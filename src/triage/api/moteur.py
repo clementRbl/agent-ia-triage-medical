@@ -30,6 +30,25 @@ from triage.schema import Constantes, Langue
 # changerait la distribution des sorties.
 OPTIONS_GABARIT: Final[dict[str, bool]] = {"enable_thinking": False}
 
+# Fin de tour du gabarit Qwen. Le modele de base declare `<|endoftext|>`
+# (151643) comme fin de sequence alors que le gabarit clot le tour de
+# l'assistant par `<|im_end|>` (151645) : sans cette borne, vLLM ne s'arreterait
+# pas la ou l'entrainement l'a appris.
+JETON_FIN_DE_TOUR: Final[int] = 151645
+
+# Phrase de cloture, identique dans toutes les reponses produites par le
+# generateur de donnees. Elle sert de borne d'arret parce que le jeton de fin de
+# tour ne suffit pas : `Qwen3-1.7B-Base` n'a recu aucun post-entrainement
+# conversationnel, et deux epoques de LoRA sur les seules projections
+# d'attention ne suffisent pas a faire de `<|im_end|>` le jeton le plus probable
+# en fin de reponse. Le modele enchaine alors sur un second tour invente.
+# L'evaluation n'en etait pas affectee -- le niveau est lu sur la premiere
+# occurrence -- mais la reponse servie, elle, l'etait.
+CLOTURES: Final[tuple[str, ...]] = (
+    "Cette évaluation est une aide à la décision : la validation revient au personnel soignant.",
+    "This assessment is decision support only: validation remains with the clinical staff.",
+)
+
 TOKENS_MAX_DEFAUT: Final[int] = 320
 DELAI_DEFAUT: Final[float] = 60.0
 
@@ -75,8 +94,13 @@ class MoteurVLLM:
             return False
         return reponse.status_code == 200
 
-    def generer(self, instruction: str, langue: Langue) -> Generation:
-        charge = {
+    def charge(self, instruction: str) -> dict[str, object]:
+        """Corps de la requete envoyee a vLLM.
+
+        Isole de l'appel reseau pour etre verifiable sans serveur : ces
+        reglages conditionnent la validite de tout ce qui est mesure.
+        """
+        return {
             "model": self.modele,
             "messages": [{"role": "user", "content": instruction}],
             # Temperature nulle : deux triages du meme tableau clinique doivent
@@ -84,7 +108,15 @@ class MoteurVLLM:
             "temperature": 0.0,
             "max_tokens": self.tokens_max,
             "chat_template_kwargs": OPTIONS_GABARIT,
+            "stop_token_ids": [JETON_FIN_DE_TOUR],
+            "stop": list(CLOTURES),
+            # vLLM retire par defaut la chaine d'arret du texte rendu ; la
+            # reserve fait partie de la reponse et doit rester visible.
+            "include_stop_str_in_output": True,
         }
+
+    def generer(self, instruction: str, langue: Langue) -> Generation:
+        charge = self.charge(instruction)
         with httpx.Client(timeout=self.delai) as client:
             reponse = client.post(
                 f"{self.base_url}/v1/chat/completions",

@@ -102,6 +102,12 @@ def _commande_vllm() -> list[str]:
         # contexte immobiliserait de la memoire pour rien.
         "--max-model-len",
         "2048",
+        # Borne explicite : vLLM prechauffe son echantillonneur sur 256 requetes
+        # simultanees par defaut, ce qui sature la memoire d'un petit GPU avant
+        # meme la premiere requete reelle. Un service d'accueil n'a de toute
+        # facon jamais 256 triages en vol.
+        "--max-num-seqs",
+        "16",
         "--gpu-memory-utilization",
         "0.90",
     ]
