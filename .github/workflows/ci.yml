@@ -26,11 +26,12 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        # Le groupe `train` est necessaire ici : sans torch ni transformers, le
-        # verificateur de types ne resout pas les imports de src/triage/training
-        # et ce module echapperait au controle. Meme raison pour `api`. Le cache
-        # uv evite de retelecharger la pile a chaque execution.
-        run: uv sync --group dev --group train --group api
+        # Tous les groupes sont installes ici, et pour une seule raison : ce que
+        # le verificateur de types ne peut pas importer, il ne verifie pas. Un
+        # groupe oublie ferait passer le module correspondant a travers le
+        # controle sans que rien ne le signale. Le cache uv evite de
+        # retelecharger la pile a chaque execution.
+        run: uv sync --all-groups
 
       - name: Lint
         run: uv run ruff check --output-format=github .
@@ -75,7 +76,10 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        run: uv sync --group dev
+        # `api` est necessaire meme si aucun test d'integrite ne l'utilise :
+        # pytest importe tous les modules de test avant d'appliquer le filtre
+        # de marqueurs, et un import manquant interrompt la collecte.
+        run: uv sync --group dev --group api
 
       - name: Verifier l'absence de fuite entre les jeux
         # Garde-fou du cahier des charges : ne jamais melanger entrainement
