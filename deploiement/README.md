@@ -80,6 +80,11 @@ sur `main`. À renseigner dans **Settings → Secrets and variables → Actions*
 Aucun secret n'entre dans l'image ni dans le dépôt : ils sont injectés à
 l'exécution.
 
+Tant que `MODAL_TOKEN_ID` et `MODAL_TOKEN_SECRET` ne sont pas renseignés, le
+workflow **s'arrête avec un avertissement plutôt qu'en échec** : rien n'est
+cassé, et une chaîne durablement rouge finirait par rendre un vrai échec
+invisible. Une fois les secrets posés, tout échec devient bloquant.
+
 ## Docker
 
 ```bash
