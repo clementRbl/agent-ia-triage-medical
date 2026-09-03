@@ -71,12 +71,12 @@ l'est.
 
 ### Livrables
 
-| Livrable | État |
+| Livrable | Où |
 | --- | --- |
-| L1 — Dataset bilingue anonymisé, 5 000 paires SFT + 3 000 paires DPO | livré |
-| L2 — Modèle Qwen3-1.7B spécialisé SFT + LoRA puis aligné DPO | livré |
-| L3 — Endpoint de démonstration servi par vLLM | livré |
-| L4 — Pipeline CI/CD GitHub Actions, tests et déploiement | livré |
+| L1 — Dataset bilingue anonymisé, 5 000 paires SFT + 3 000 DPO | dépôt, format parquet |
+| L2 — Modèle spécialisé SFT + LoRA puis aligné DPO | `ClementRbl/triage-chsa-qwen3-1.7b` |
+| L3 — Endpoint servi par vLLM | `clement-rbl--triage-chsa-service.modal.run` |
+| L4 — Pipeline CI/CD GitHub Actions | tests, intégrité des données, déploiement |
 | L5 — Rapport technique et recommandations | ce document |
 
 ## 2. Contexte, périmètre et contraintes
@@ -91,20 +91,15 @@ hospitalier et garantir la traçabilité de chaque interaction.
 
 ### Le barème
 
-Les trois niveaux demandés sont une transposition de l'échelle de tri
-française **FRENCH**, qui en compte cinq :
+Les trois niveaux demandés transposent l'échelle de tri française **FRENCH**,
+qui en compte cinq : urgence maximale ↔ tri 1–2 (prise en charge immédiate ou
+< 20 min), urgence modérée ↔ tri 3 (< 60 min), prise en charge différée ↔
+tri 4–5 (réorientation possible).
 
-| Niveau CHSA | Correspondance FRENCH | Délai de prise en charge |
-| --- | --- | --- |
-| Urgence maximale | tri 1–2 | immédiate ou < 20 min |
-| Urgence modérée | tri 3 | < 60 min |
-| Prise en charge différée | tri 4–5 | différée, réorientation possible |
-
-Les critères de bascule retenus sont explicites et vérifiables : score de
-Glasgow < 14, SpO₂ < 90 %, fréquence respiratoire > 30 ou < 8/min, pression
-systolique < 90 mmHg, fréquence cardiaque > 130 ou < 40/min, ou présence d'un
-signe de gravité. Ils placent le cas en urgence maximale. Un second jeu de
-critères, moins sévères, définit l'urgence modérée.
+Les critères de bascule sont explicites et vérifiables : score de Glasgow < 14,
+SpO₂ < 90 %, fréquence respiratoire > 30 ou < 8/min, pression systolique
+< 90 mmHg, fréquence cardiaque > 130 ou < 40/min, ou présence d'un signe de
+gravité. Un second jeu de critères, moins sévères, définit l'urgence modérée.
 
 > **Cette transposition n'a pas été validée par un clinicien.** C'est la
 > limite structurante du POC : tout ce qui suit mesure la conformité du modèle
@@ -571,31 +566,63 @@ inaperçu.
 
 ## 8. Performances mesurées
 
-> Mesures réalisées sur **RTX 3080 (10 Go)**, vLLM 0.11.0, Qwen3-1.7B-Base
-> coiffé de l'adaptateur LoRA, fenêtre 2 048 tokens, 16 requêtes simultanées
-> au plus. Un T4 d'hébergement gratuit est sensiblement plus lent : ces
-> chiffres sont un plancher, pas une promesse de production.
+> Mesures réalisées **sur l'endpoint déployé**, depuis un poste client à
+> travers l'internet public : GPU A10G, vLLM 0.11.0, Qwen3-1.7B-Base coiffé de
+> l'adaptateur LoRA tiré du Hub, fenêtre 2 048 tokens, 16 requêtes simultanées
+> au plus.
+>
+> Service : <https://clement-rbl--triage-chsa-service.modal.run>
 
 ### Latence de bout en bout
 
-Ce qui est mesuré est le temps perçu par un agent d'accueil : mise en forme du
-prompt, génération, garde-fou et écriture du journal compris. La latence du
-seul modèle serait plus flatteuse et ne correspondrait à l'expérience de
-personne.
+Ce qui est mesuré est le temps perçu par un agent d'accueil : trajet réseau,
+mise en forme du prompt, génération, garde-fou et écriture du journal compris.
+La latence du seul modèle serait plus flatteuse et ne correspondrait à
+l'expérience de personne.
 
 | | Moyenne | Médiane | p90 | p95 | Maximum | Échecs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Séquentiel (30 appels) | 1 096 ms | 1 160 ms | 1 489 ms | **1 492 ms** | 1 508 ms | 0 |
-| 8 requêtes en parallèle | 1 127 ms | 1 180 ms | 1 528 ms | **1 579 ms** | 1 593 ms | 0 |
+| Séquentiel (30 appels) | 2 002 ms | 2 051 ms | 2 558 ms | **2 560 ms** | 2 732 ms | 0 |
+| 8 requêtes en parallèle | 2 092 ms | 2 172 ms | 2 594 ms | **2 675 ms** | 2 866 ms | 0 |
 
 **Le passage à huit requêtes simultanées ne coûte que 6 % de latence
 médiane.** C'est l'apport concret de vLLM : le traitement par lots continu
-absorbe la concurrence au lieu de la sérialiser. Pour un service d'accueil, ce
-comportement compte davantage que la latence à vide.
+absorbe la concurrence au lieu de la sérialiser. Pour un service d'accueil où
+plusieurs postes trient en parallèle, ce comportement compte davantage que la
+latence à vide.
 
-Le **démarrage à froid** est de 7 519 ms — chargement du modèle et de
-l'adaptateur. Il est rapporté séparément plutôt que noyé dans la moyenne :
-c'est la latence que subit le premier patient après une période creuse.
+Le **démarrage à froid** est de 27 s — allumage du conteneur, chargement du
+modèle et de l'adaptateur. Il est rapporté séparément plutôt que noyé dans la
+moyenne : c'est la latence que subit le premier patient après une période
+creuse, conséquence assumée d'un hébergement à coût nul qui éteint le
+conteneur au bout de cinq minutes d'inactivité.
+
+### Le choix du GPU s'est fait sur mesure, pas sur catalogue
+
+Le premier déploiement tournait sur T4, le GPU le moins cher. Les chiffres ont
+tranché :
+
+| GPU | Médiane séquentielle | p95 séquentielle | Médiane sous charge | p95 sous charge |
+| --- | --- | --- | --- | --- |
+| T4 | 8 046 ms | 10 415 ms | 12 135 ms | 23 040 ms |
+| **A10G** | **2 051 ms** | **2 560 ms** | **2 172 ms** | **2 675 ms** |
+
+Un facteur quatre, pour trois raisons cumulées : la génération T4 ne gère pas
+bfloat16 — vLLM retombe en float16, alors que l'entraînement s'est fait en
+bfloat16 — ni FlashAttention 2, ce qui force un noyau d'attention lent ; et sa
+bande passante mémoire est 2,4 fois inférieure, facteur dominant en génération.
+
+Sous charge, l'écart se creuse encore : le T4 sérialise là où l'A10G continue
+d'absorber. **Une p95 à 23 secondes serait inutilisable à un guichet
+d'accueil.**
+
+L'A10G consomme plus de crédits à l'heure, mais le conteneur s'éteint après
+cinq minutes d'inactivité : sur un POC sollicité par intermittence, la dépense
+réelle reste très en deçà des 30 $ mensuels gratuits.
+
+Pour référence, les mêmes mesures sur poste local (RTX 3080, sans trajet
+réseau) donnent 1 160 ms de médiane : le coût de l'hébergement distant est donc
+d'environ 900 ms.
 
 ### Un défaut que seule la mesure de bout en bout pouvait révéler
 
@@ -644,8 +671,29 @@ que les constantes ; c'est le garde-fou qui neutralise l'injection.
 
 ### Traçabilité
 
-126 entrées écrites pendant la campagne, **chaîne d'empreintes intacte**,
-aucune rupture. Chaque interaction est reconstituable dans son ordre exact.
+257 entrées écrites sur le volume persistant de l'endpoint, **chaîne
+d'empreintes intacte**, aucune rupture. Chaque interaction est reconstituable
+dans son ordre exact.
+
+Déroulé réel d'un entretien conduit sur le service déployé, motif « dyspnée » :
+
+```
+ouverture_session
+question_posee  motif          → dyspnée
+question_posee  age            → 72
+question_posee  sexe           → masculin
+question_posee  signe_gravite  → non
+   « cyanose, tirage intercostal, impossibilité de parler en phrases ? »
+question_posee  glasgow        → 15
+question_posee  saturation     → 87
+triage_rendu    maximale         (SpO2 < 90 %)
+```
+
+**Six questions, puis arrêt.** La fréquence respiratoire, la pression, la
+fréquence cardiaque, la température, la douleur et les antécédents n'ont pas
+été demandés : la SpO₂ à 87 % suffisait à conclure, et poursuivre n'aurait fait
+que retarder la prise en charge. La question de dépistage, elle, est propre à
+la dyspnée.
 
 ### Pertinence clinique en service
 
@@ -798,9 +846,9 @@ CHSA plutôt qu'un corpus anglophone générique.
 | Journal d'audit complet, sans PII, infalsifiable | ✅ 4 formes d'altération détectées |
 | Limites d'usage documentées et exposées | ✅ |
 | Robustesse aux saisies fautives | ✅ 8 / 8 |
-| Latence p95 sous la seconde et demie | ✅ 1 492 ms séquentiel, 1 579 ms sous charge |
-| Déploiement automatisé et reproductible | ✅ |
-| Retour arrière | ✅ adaptateur servi à chaud |
+| Latence p95 sous les trois secondes | ✅ 2 560 ms séquentiel, 2 675 ms sous charge |
+| Déploiement automatisé et reproductible | ✅ endpoint public, livraison depuis `main` |
+| Retour arrière | ✅ adaptateur servi à chaud depuis le Hub |
 | **Taux de sous-triage critique sous le seuil** | ❌ **8,5 % [5,4 ; 13,2]** — seuil non fixé |
 
 **Verdict : go conditionnel.**
@@ -814,6 +862,14 @@ Il démontre aussi, et c'est au moins aussi utile, **qu'il ne doit pas être
 servi seul**. Dix-sept urgences vitales sur deux cents seraient classées en
 priorité moindre par le modèle livré à lui-même. Le garde-fou par barème
 ramène ce risque à celui du barème, qui reste à faire valider.
+
+Deux pannes rencontrées méritent d'être retenues, parce qu'aucune n'était
+visible autrement qu'en servant réellement le modèle : une génération qui ne
+s'arrêtait jamais, et un déploiement où l'adaptateur n'était pas transmis au
+conteneur — vLLM servait alors le **modèle nu sous le nom du modèle affiné**,
+répondant de façon plausible et fausse. La seconde a été corrigée en refusant
+de démarrer sans adaptateur, et en donnant des noms distincts aux deux
+modèles : la même situation produit désormais une erreur franche.
 
 Ce que le POC autorise dès maintenant :
 

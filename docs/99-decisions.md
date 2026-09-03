@@ -53,6 +53,10 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-09-03 | Repli par barème **jamais silencieux** | Un service répondant avec le barème en croyant interroger le modèle fausserait toutes les mesures sans que rien ne le signale |
 | 2026-09-03 | Poids publiés : **l'adaptateur seul** (67 Mo), pas le modèle fusionné | Republier 3,4 Go redistribuerait à l'identique des poids Qwen publics. vLLM charge l'adaptateur à chaud, ce qui permet le retour arrière sans reconstruire d'image |
 | 2026-09-03 | CI : le job de qualité installe **tous les groupes** | Ce que le vérificateur de types ne peut pas importer, il ne vérifie pas. Un groupe oublié fait échapper un module au contrôle sans que rien ne le signale |
+| 2026-09-03 | GPU : **A10G** et non T4 | Mesuré : 2 051 ms de médiane contre 8 046 ms, et 2 675 ms de p95 sous charge contre 23 040 ms. Le T4 ne gère ni bfloat16 ni FlashAttention 2, et sa bande passante mémoire est 2,4 fois inférieure |
+| 2026-09-03 | Le modèle de base et le modèle affiné portent des **noms distincts** dans vLLM | S'ils partageaient une étiquette, un adaptateur manquant ferait servir le modèle nu sous le nom du modèle affiné : réponses plausibles et fausses, qu'aucune sonde ne détecte |
+| 2026-09-03 | Le service **refuse de démarrer** sans adaptateur, et la configuration lue au déploiement est figée dans l'image | Une variable lue au niveau module n'existe pas dans le conteneur, qui réévalue le module à son démarrage. C'est exactement ce qui a fait servir le modèle nu au premier déploiement |
+| 2026-09-03 | Publication : `ref/` et `training_args.bin` exclus du dépôt Hub | `ref/` est l'adaptateur de référence du DPO et doublait la taille ; télécharger un pickle depuis un dépôt public revient à exécuter du code qu'on n'a pas lu |
 
 ## À trancher
 
