@@ -1,0 +1,100 @@
+name: Deploiement
+
+# Le deploiement ne part que de `main`, et seulement si la CI y est verte :
+# livrer une version dont les tests n'ont pas ete rejoues reviendrait a
+# mettre en service un modele de triage non verifie.
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: deploiement
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    name: Deployer sur Modal
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verifier la presence des secrets
+        # Sans ce controle, l'absence d'un jeton se manifesterait par une
+        # erreur d'authentification obscure au milieu du deploiement.
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          manquants=""
+          [ -z "$MODAL_TOKEN_ID" ] && manquants="$manquants MODAL_TOKEN_ID"
+          [ -z "$MODAL_TOKEN_SECRET" ] && manquants="$manquants MODAL_TOKEN_SECRET"
+          if [ -n "$manquants" ]; then
+            echo "::error::Secrets absents :$manquants"
+            echo "Renseignez-les dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installer les dependances
+        run: uv sync --group deploiement
+
+      - name: Deployer
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          # L'adaptateur LoRA est tire du Hub au demarrage du conteneur :
+          # embarquer les poids dans l'image la rendrait inutilement lourde et
+          # les figerait a la construction.
+          TRIAGE_ADAPTATEUR: ${{ vars.TRIAGE_ADAPTATEUR }}
+          TRIAGE_MODELE_BASE: ${{ vars.TRIAGE_MODELE_BASE }}
+        run: uv run modal deploy deploiement/modal_app.py
+
+  verifier:
+    name: Verifier le service deploye
+    runs-on: ubuntu-latest
+    needs: deployer
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Installer les dependances
+        run: uv sync --group dev --group api
+
+      - name: Mesurer latence, robustesse et tracabilite
+        # Le script sort en erreur si un controle echoue : un deploiement qui
+        # repond mal doit teindre la chaine en rouge, pas passer inapercu.
+        env:
+          TRIAGE_CLE_API: ${{ secrets.TRIAGE_CLE_API }}
+          URL_SERVICE: ${{ vars.URL_SERVICE }}
+        run: |
+          if [ -z "$URL_SERVICE" ]; then
+            echo "::warning::URL_SERVICE non renseignee, verification ignoree."
+            exit 0
+          fi
+          uv run python scripts/mesurer_service.py \
+            --url "$URL_SERVICE" --appels 20 --parallelisme 4
+
+      - name: Conserver les mesures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesures-service
+          path: outputs/mesures_service.json
+          if-no-files-found: ignore

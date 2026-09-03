@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import pandas as pd
 import torch
@@ -136,19 +136,25 @@ def evaluer_modele(
     )
 
 
+# 600 cas, soit 200 urgences maximales : l'intervalle de confiance du taux de
+# sous-triage critique tombe alors a environ +/- 5 points, contre +/- 10 avec
+# les 120 cas initiaux. En dessous, aucun seuil d'acceptation n'est fixable.
+CAS_GENERALISATION: Final[int] = 600
+
+
 def evaluer_generalisation(
     nom: str,
     adaptateur: Path | None = None,
-    nombre: int = 120,
+    nombre: int = CAS_GENERALISATION,
     graine: int = 777,
     tokens_max: int = 320,
 ) -> tuple[ResultatEvaluation, list[str]]:
     """Evalue sur des motifs de recours **jamais vus a l'entrainement**.
 
     Le jeu de test ordinaire reutilise les douze motifs d'entrainement : un
-    modele peut y exceller en retenant la forme des cas. Ici les six motifs
-    sont inedits, ce qui distingue l'apprentissage de la regle de triage de la
-    simple memorisation des gabarits.
+    modele peut y exceller en retenant la forme des cas. Ici les quatorze
+    motifs sont inedits, ce qui distingue l'apprentissage de la regle de triage
+    de la simple memorisation des gabarits.
     """
     from triage.data.triage import PRESENTATIONS_INEDITES, generer_cas
 

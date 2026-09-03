@@ -462,23 +462,45 @@ def _valeur_mesuree(critere: Critere, c: Constantes, langue: str) -> str:
     return f"{intitule} {valeur}{unite}"
 
 
-def _formater_constantes(c: Constantes, langue: str) -> str:
+def formater_constantes(c: Constantes, langue: str) -> str:
+    """Constantes vitales mises en forme ; les valeurs absentes sont omises.
+
+    Le service d'inference recoit des releves partiels -- un patient triage sur
+    un signe de gravite n'a pas encore de temperature. La generation, elle,
+    fournit toujours les sept constantes : sur un releve complet la sortie est
+    identique a celle qui a servi a l'entrainement, ce que verrouille un test.
+    """
     # Les abreviations different d'une langue a l'autre : FC/FR en francais,
     # HR/RR en anglais. Un melange trahirait une traduction bacle.
     fr = langue == "fr"
     pourcent = " %" if fr else "%"
-    # Le francais ecrit la decimale avec une virgule.
-    temperature = f"{c.temperature:.1f}".replace(".", ",") if fr else f"{c.temperature:.1f}"
-    morceaux = [
-        f"{'FC' if fr else 'HR'} {c.frequence_cardiaque}/min",
-        f"{'PA' if fr else 'BP'} {c.pression_systolique}/{c.pression_diastolique} mmHg",
-        f"{'FR' if fr else 'RR'} {c.frequence_respiratoire}/min",
-        f"SpO2 {c.saturation}{pourcent}",
-        f"{'T' if fr else 'Temp'} {temperature} °C",
-        f"Glasgow {c.glasgow}",
-        f"{'EVA' if fr else 'pain'} {c.douleur}/10",
-    ]
+    morceaux: list[str] = []
+
+    if c.frequence_cardiaque is not None:
+        morceaux.append(f"{'FC' if fr else 'HR'} {c.frequence_cardiaque}/min")
+    if c.pression_systolique is not None and c.pression_diastolique is not None:
+        morceaux.append(
+            f"{'PA' if fr else 'BP'} {c.pression_systolique}/{c.pression_diastolique} mmHg"
+        )
+    elif c.pression_systolique is not None:
+        morceaux.append(f"{'PA' if fr else 'BP'} {c.pression_systolique} mmHg")
+    if c.frequence_respiratoire is not None:
+        morceaux.append(f"{'FR' if fr else 'RR'} {c.frequence_respiratoire}/min")
+    if c.saturation is not None:
+        morceaux.append(f"SpO2 {c.saturation}{pourcent}")
+    if c.temperature is not None:
+        # Le francais ecrit la decimale avec une virgule.
+        valeur = f"{c.temperature:.1f}".replace(".", ",") if fr else f"{c.temperature:.1f}"
+        morceaux.append(f"{'T' if fr else 'Temp'} {valeur} °C")
+    if c.glasgow is not None:
+        morceaux.append(f"Glasgow {c.glasgow}")
+    if c.douleur is not None:
+        morceaux.append(f"{'EVA' if fr else 'pain'} {c.douleur}/10")
     return ", ".join(morceaux)
+
+
+def _formater_constantes(c: Constantes, langue: str) -> str:
+    return formater_constantes(c, langue)
 
 
 _CONDUITE: Final[dict[NiveauPriorite, dict[str, str]]] = {
@@ -509,6 +531,70 @@ _LIBELLE_NIVEAU: Final[dict[NiveauPriorite, dict[str, str]]] = {
 }
 
 
+def composer_instruction(
+    langue: str,
+    age: int | None,
+    sexe: str | None,
+    motif: str,
+    symptomes: list[str],
+    antecedents: list[str],
+    constantes: Constantes,
+    duree: str | None = None,
+) -> str:
+    """Redige le prompt de triage, pour l'entrainement comme pour le service.
+
+    Une seule fonction pour les deux usages : si le service composait son
+    prompt de son cote, un ecart de mise en forme suffirait a faire chuter le
+    modele sans que rien ne le signale, et les scores mesures ne vaudraient
+    plus rien. Les champs absents sont omis plutot que remplis de « inconnu »,
+    forme jamais rencontree a l'entrainement.
+    """
+    fr = langue == "fr"
+    lignes: list[str] = []
+
+    if age is not None and sexe is not None:
+        lignes.append(
+            f"Patient de {age} ans, sexe {sexe}." if fr else f"{age}-year-old patient, {sexe}."
+        )
+    elif age is not None:
+        lignes.append(f"Patient de {age} ans." if fr else f"{age}-year-old patient.")
+
+    evolution = ""
+    if duree:
+        evolution = f", évoluant depuis {duree}" if fr else f", ongoing for {duree}"
+    lignes.append(
+        f"Motif de recours : {motif}{evolution}."
+        if fr
+        else f"Presenting complaint: {motif}{evolution}."
+    )
+
+    if symptomes:
+        intitule = "Symptômes rapportés" if fr else "Reported symptoms"
+        lignes.append(
+            f"{intitule} : {', '.join(symptomes)}."
+            if fr
+            else f"{intitule}: {', '.join(symptomes)}."
+        )
+    if antecedents:
+        intitule = "Antécédents" if fr else "Medical history"
+        lignes.append(
+            f"{intitule} : {', '.join(antecedents)}."
+            if fr
+            else f"{intitule}: {', '.join(antecedents)}."
+        )
+    if not constantes.est_vide():
+        intitule = "Constantes à l'admission" if fr else "Vital signs on admission"
+        valeurs = formater_constantes(constantes, langue)
+        lignes.append(f"{intitule} : {valeurs}." if fr else f"{intitule}: {valeurs}.")
+
+    consigne = (
+        "Évaluez le niveau de priorité de triage et justifiez votre évaluation."
+        if fr
+        else "Assess the triage priority level and justify your assessment."
+    )
+    return "\n".join(lignes) + "\n\n" + consigne
+
+
 def _rediger_instruction(
     presentation: Presentation,
     langue: str,
@@ -519,22 +605,15 @@ def _rediger_instruction(
     constantes: Constantes,
     duree: str,
 ) -> str:
-    if langue == "fr":
-        return (
-            f"Patient de {age} ans, sexe {sexe}.\n"
-            f"Motif de recours : {presentation.motif['fr']}, évoluant depuis {duree}.\n"
-            f"Symptômes rapportés : {', '.join(symptomes)}.\n"
-            f"Antécédents : {', '.join(antecedents)}.\n"
-            f"Constantes à l'admission : {_formater_constantes(constantes, 'fr')}.\n\n"
-            "Évaluez le niveau de priorité de triage et justifiez votre évaluation."
-        )
-    return (
-        f"{age}-year-old patient, {sexe}.\n"
-        f"Presenting complaint: {presentation.motif['en']}, ongoing for {duree}.\n"
-        f"Reported symptoms: {', '.join(symptomes)}.\n"
-        f"Medical history: {', '.join(antecedents)}.\n"
-        f"Vital signs on admission: {_formater_constantes(constantes, 'en')}.\n\n"
-        "Assess the triage priority level and justify your assessment."
+    return composer_instruction(
+        langue=langue,
+        age=age,
+        sexe=sexe,
+        motif=presentation.motif[langue],
+        symptomes=symptomes,
+        antecedents=antecedents,
+        constantes=constantes,
+        duree=duree,
     )
 
 
@@ -744,6 +823,146 @@ PRESENTATIONS_INEDITES: Final[tuple[Presentation, ...]] = (
         },
         age_min=14,
         age_max=45,
+    ),
+    Presentation(
+        cle="colique_nephretique",
+        motif={"fr": "colique néphrétique", "en": "renal colic"},
+        symptomes={
+            "fr": ("douleur lombaire irradiant vers l'aine", "agitation", "nausées"),
+            "en": ("flank pain radiating to the groin", "restlessness", "nausea"),
+        },
+        signes_gravite={
+            "fr": ("fièvre associée", "anurie", "rein unique connu"),
+            "en": ("associated fever", "anuria", "known solitary kidney"),
+        },
+        antecedents={
+            "fr": ("lithiase urinaire", "goutte", "aucun"),
+            "en": ("urinary stones", "gout", "none"),
+        },
+    ),
+    Presentation(
+        cle="douleur_mollet",
+        motif={"fr": "douleur du mollet", "en": "calf pain"},
+        symptomes={
+            "fr": ("mollet douloureux et tendu", "œdème unilatéral", "chaleur locale"),
+            "en": ("painful tense calf", "unilateral swelling", "local warmth"),
+        },
+        signes_gravite={
+            "fr": ("douleur thoracique associée", "dyspnée d'apparition brutale", "hémoptysie"),
+            "en": ("associated chest pain", "sudden breathlessness", "haemoptysis"),
+        },
+        antecedents={
+            "fr": (
+                "immobilisation prolongée",
+                "contraception œstroprogestative",
+                "néoplasie évolutive",
+            ),
+            "en": ("prolonged immobilisation", "combined oral contraception", "active cancer"),
+        },
+    ),
+    Presentation(
+        cle="hypoglycemie",
+        motif={"fr": "malaise hypoglycémique", "en": "hypoglycaemic episode"},
+        symptomes={
+            "fr": ("sueurs profuses", "tremblements", "sensation de faim impérieuse"),
+            "en": ("profuse sweating", "tremor", "intense hunger"),
+        },
+        signes_gravite={
+            "fr": ("troubles du comportement", "coma", "convulsions"),
+            "en": ("behavioural disturbance", "coma", "convulsions"),
+        },
+        antecedents={
+            "fr": ("diabète insulinotraité", "insuffisance rénale", "sulfamides hypoglycémiants"),
+            "en": ("insulin-treated diabetes", "renal failure", "sulfonylurea treatment"),
+        },
+    ),
+    Presentation(
+        cle="douleur_pelvienne",
+        motif={"fr": "douleur pelvienne aiguë", "en": "acute pelvic pain"},
+        symptomes={
+            "fr": ("douleur hypogastrique", "métrorragies", "retard de règles"),
+            "en": ("lower abdominal pain", "vaginal bleeding", "missed period"),
+        },
+        signes_gravite={
+            "fr": ("douleur scapulaire", "lipothymie", "défense hypogastrique"),
+            "en": ("shoulder tip pain", "near-syncope", "lower abdominal guarding"),
+        },
+        antecedents={
+            "fr": ("grossesse extra-utérine antérieure", "dispositif intra-utérin", "salpingite"),
+            "en": ("previous ectopic pregnancy", "intrauterine device", "pelvic infection"),
+        },
+        age_min=16,
+        age_max=45,
+    ),
+    Presentation(
+        cle="epistaxis",
+        motif={"fr": "épistaxis", "en": "nosebleed"},
+        symptomes={
+            "fr": ("saignement de narine", "écoulement postérieur", "anxiété"),
+            "en": ("nostril bleeding", "posterior drainage", "anxiety"),
+        },
+        signes_gravite={
+            "fr": ("saignement bilatéral incoercible", "pâleur", "déglutitions répétées"),
+            "en": ("uncontrollable bilateral bleeding", "pallor", "repeated swallowing"),
+        },
+        antecedents={
+            "fr": ("traitement anticoagulant", "hypertension artérielle", "maladie de Willebrand"),
+            "en": ("anticoagulant therapy", "hypertension", "von Willebrand disease"),
+        },
+    ),
+    Presentation(
+        cle="agitation",
+        motif={"fr": "état d'agitation", "en": "acute agitation"},
+        symptomes={
+            "fr": ("propos incohérents", "déambulation", "insomnie"),
+            "en": ("incoherent speech", "pacing", "insomnia"),
+        },
+        signes_gravite={
+            "fr": ("hétéro-agressivité", "idées suicidaires exprimées", "hallucinations"),
+            "en": ("aggression towards others", "expressed suicidal ideation", "hallucinations"),
+        },
+        antecedents={
+            "fr": ("trouble bipolaire", "sevrage alcoolique", "schizophrénie"),
+            "en": ("bipolar disorder", "alcohol withdrawal", "schizophrenia"),
+        },
+    ),
+    Presentation(
+        cle="retention_urinaire",
+        motif={"fr": "rétention aiguë d'urine", "en": "acute urinary retention"},
+        symptomes={
+            "fr": ("impossibilité d'uriner", "globe vésical", "douleur hypogastrique"),
+            "en": ("inability to pass urine", "distended bladder", "lower abdominal pain"),
+        },
+        signes_gravite={
+            "fr": ("insuffisance rénale aiguë", "fièvre", "hématurie macroscopique"),
+            "en": ("acute kidney injury", "fever", "visible haematuria"),
+        },
+        antecedents={
+            "fr": ("hypertrophie bénigne de prostate", "traitement anticholinergique", "aucun"),
+            "en": ("benign prostatic hyperplasia", "anticholinergic treatment", "none"),
+        },
+        age_min=45,
+    ),
+    Presentation(
+        cle="eruption_febrile",
+        motif={"fr": "éruption cutanée fébrile", "en": "febrile rash"},
+        symptomes={
+            "fr": ("éruption maculo-papuleuse", "fièvre", "asthénie"),
+            "en": ("maculopapular rash", "fever", "fatigue"),
+        },
+        signes_gravite={
+            "fr": (
+                "purpura ne s'effaçant pas à la vitropression",
+                "atteinte des muqueuses",
+                "décollement cutané",
+            ),
+            "en": ("non-blanching purpura", "mucosal involvement", "skin detachment"),
+        },
+        antecedents={
+            "fr": ("introduction récente d'un médicament", "immunodépression", "aucun"),
+            "en": ("recently started medication", "immunosuppression", "none"),
+        },
+        age_min=14,
     ),
     Presentation(
         cle="polytraumatisme",

@@ -17,20 +17,21 @@ jobs:
     name: Lint, format et types
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Installer uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        # Le groupe `train` est necessaire ici : sans torch ni transformers, le
-        # verificateur de types ne resout pas les imports de src/triage/training
-        # et ce module echapperait au controle. Le cache uv evite de retelecharger
-        # la pile a chaque execution.
-        run: uv sync --group dev --group train
+        # Tous les groupes sont installes ici, et pour une seule raison : ce que
+        # le verificateur de types ne peut pas importer, il ne verifie pas. Un
+        # groupe oublie ferait passer le module correspondant a travers le
+        # controle sans que rien ne le signale. Le cache uv evite de
+        # retelecharger la pile a chaque execution.
+        run: uv sync --all-groups
 
       - name: Lint
         run: uv run ruff check --output-format=github .
@@ -45,18 +46,19 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Installer uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
         # Les modeles spaCy sont epingles dans pyproject.toml : le cache uv
-        # evite de les retelecharger a chaque execution.
-        run: uv sync --group dev
+        # evite de les retelecharger a chaque execution. `api` reste leger : il
+        # permet de tester le service sans installer torch ni vLLM.
+        run: uv sync --group dev --group api
 
       - name: Tests
         run: uv run pytest -q -m "not integrite"
@@ -65,16 +67,19 @@ jobs:
     name: Integrite du jeu de donnees
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Installer uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
       - name: Installer les dependances
-        run: uv sync --group dev
+        # `api` est necessaire meme si aucun test d'integrite ne l'utilise :
+        # pytest importe tous les modules de test avant d'appliquer le filtre
+        # de marqueurs, et un import manquant interrompt la collecte.
+        run: uv sync --group dev --group api
 
       - name: Verifier l'absence de fuite entre les jeux
         # Garde-fou du cahier des charges : ne jamais melanger entrainement

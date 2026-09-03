@@ -43,13 +43,25 @@ Ce journal alimente directement la section « méthodologie » du rapport final.
 | 2026-08-26 | **Les paires de triage sont exclues de l'alignement** | Le triage a une vérité terrain déterministe, à laquelle le DPO ne convient pas. L'ablation le démontre : 64,65 % avec, 92,93 % sans |
 | 2026-08-26 | Modèle livré : **SFT + DPO sur les seules paires UltraMedical** | Conforme au cahier des charges, et seule variante qui préserve la sécurité (31/31 urgences identifiées) |
 
+| 2026-09-03 | Jeu de généralisation porté à **600 cas / 200 urgences**, motifs réservés de 6 à **14** | Dimensionné par calcul, pas au jugé : ±5 points de précision demandent 169 urgences. Augmenter le seul volume aurait répété six tableaux quatorze fois |
+| 2026-09-03 | Hébergement : **Modal**, plan gratuit | Seule offre gratuite donnant un vrai GPU, donc la seule où vLLM garde un sens et où les latences sont défendables. 30 $ de crédits mensuels renouvelés, sans carte bancaire |
+| 2026-09-03 | Un **seul conteneur GPU** : vLLM en sous-processus, API sur la boucle locale | Deux conteneurs doubleraient le démarrage à froid et feraient transiter chaque requête par le réseau sans contrepartie |
+| 2026-09-03 | **Garde-fou par barème** : la priorité est relevée quand le modèle annonce moins grave | 8,5 % de sous-triage critique mesuré sur 200 urgences. Servir le modèle nu serait indéfendable ; le garde-fou n'agit que dans le sens de la sécurité |
+| 2026-09-03 | **Règle d'arrêt du questionnaire déterministe**, jamais confiée au modèle | Un modèle décidant lui-même d'en savoir assez pourrait conclure sur un dossier vide : la panne la plus dangereuse du système |
+| 2026-09-03 | **Prompt factorisé** entre génération de données et service | Un écart de mise en forme suffirait à faire chuter le modèle sans alerte, rendant caducs les scores mesurés. Vérifié : 1000 instructions régénérées à l'octet près |
+| 2026-09-03 | Journal d'audit **chaîné par empreintes** | Un journal médical réécrivable ne prouve rien. Le chaînage rend l'altération visible — pas impossible, ce qui serait un autre problème |
+| 2026-09-03 | Repli par barème **jamais silencieux** | Un service répondant avec le barème en croyant interroger le modèle fausserait toutes les mesures sans que rien ne le signale |
+| 2026-09-03 | Poids publiés : **l'adaptateur seul** (67 Mo), pas le modèle fusionné | Republier 3,4 Go redistribuerait à l'identique des poids Qwen publics. vLLM charge l'adaptateur à chaud, ce qui permet le retour arrière sans reconstruire d'image |
+| 2026-09-03 | CI : le job de qualité installe **tous les groupes** | Ce que le vérificateur de types ne peut pas importer, il ne vérifie pas. Un groupe oublié fait échapper un module au contrôle sans que rien ne le signale |
+
 ## À trancher
 
 | Sujet | Options | Statut |
 |---|---|---|
-| Hébergement de l'endpoint | RunPod / Scaleway / HF Endpoints / autre | ⏳ à trancher avant S4 |
+| ~~Hébergement de l'endpoint~~ | Modal, plan gratuit | ✅ tranché |
 | ~~Volume du jeu DPO~~ | 3 000 paires produites, dont 2 000 servent à l'alignement | ✅ tranché |
+| ~~Publication des poids~~ | HF Hub, adaptateur seul (67 Mo) | ✅ tranché — nécessite un jeton d'écriture |
+| ~~Élargissement du jeu d'évaluation clinique~~ | 600 cas / 200 urgences | ✅ tranché |
 | Hébergement du dataset | HF Hub (public/privé) / repo git + LFS | ⏳ |
-| Publication des poids | HF Hub / pièce jointe au livrable | ⏳ 134 Mo au total |
-| Élargissement du jeu d'évaluation clinique | 40 urgences → combien ? | ⏳ **prérequis au go/no-go** |
+| **Seuil d'acceptation du sous-triage critique** | à fixer par un clinicien, pas par l'équipe technique | ⏳ **bloque le go/no-go** |
 

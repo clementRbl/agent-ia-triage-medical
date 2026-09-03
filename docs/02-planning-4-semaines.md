@@ -45,7 +45,9 @@ Objectif : affiner le comportement du modèle sur les attentes cliniques.
 | S1 | Données | 5 000 paires SFT + 3 000 paires DPO, anonymisées, splits sans fuite | ✅ |
 | S2 | SFT + LoRA | adaptateur 67 Mo, 91,92 % d'exactitude, 0 urgence manquée | ✅ |
 | S3 | DPO | adaptateur aligné, comparaison base/SFT/DPO, 92,93 % | ✅ |
-| S4 | Déploiement | endpoint vLLM + CI/CD de déploiement + rapport PDF | ⏳ |
+| S4 | Déploiement | service complet, image Docker, application Modal, livraison continue, mesures | ✅ |
+| S4 | Évaluation élargie | 600 cas / 200 urgences, 14 motifs réservés, intervalles de confiance | ✅ |
+| S4 | Rapport | PDF ≤ 20 pages + roadmap de passage à l'échelle | ⏳ |
 
 Résultats mesurés : [04b — Résultats d'entraînement](04b-resultats-entrainement.md).
 
@@ -61,3 +63,13 @@ Résultats mesurés : [04b — Résultats d'entraînement](04b-resultats-entrain
   modèle ; une ablation a isolé la cause — [04b](04b-resultats-entrainement.md).
 - **CI/CD** : mise en place dès la semaine 1 plutôt qu'en semaine 4, pour
   garder toutes les livraisons suivantes.
+- **Jeu d'évaluation** : élargi en semaine 4, de 120 à 600 cas. Avec
+  40 urgences, l'intervalle de confiance du sous-triage critique allait de
+  5,5 % à 26,1 % ; aucun seuil d'acceptation n'était fixable. La mesure élargie
+  a révélé un taux réel de 8,5 % là où l'échantillon réduit en montrait 2,5 %.
+- **Garde-fou de sécurité** : non prévu au cahier des charges, ajouté en
+  conséquence de cette mesure. Un sous-triage critique de 8,5 % interdit de
+  servir le modèle seul ; un barème explicite relève la priorité en cas de
+  désaccord — [05](05-etape-3-deploiement.md).
+- **Hébergement** : Modal, dont le plan gratuit fournit un vrai GPU. Les autres
+  offres gratuites sont limitées au CPU, où vLLM perdrait sa raison d'être.
