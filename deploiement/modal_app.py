@@ -49,6 +49,11 @@ image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(
         "vllm==0.11.0",
+        # transformers est epingle sous la version 5 : vLLM 0.11 appelle
+        # `all_special_tokens_extended`, retire depuis. Laisser pip resoudre
+        # librement casse le serveur au demarrage, apres construction de
+        # l'image -- soit le pire moment pour s'en apercevoir.
+        "transformers>=4.55.2,<5",
         "fastapi>=0.115",
         "httpx>=0.28",
         "pydantic>=2.10",

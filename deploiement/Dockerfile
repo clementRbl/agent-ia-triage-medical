@@ -20,10 +20,15 @@ WORKDIR /app
 # Les dependances d'abord : elles changent rarement, le cache de couches evite
 # de les reinstaller a chaque modification du code.
 COPY pyproject.toml uv.lock README.md ./
+# `--no-deps` sur l'installation finale : l'image de base epingle deja torch et
+# transformers dans les versions avec lesquelles vLLM a ete compile, et une
+# resolution libre les remplacerait par des versions incompatibles.
 RUN pip install --no-cache-dir uv \
     && uv export --no-hashes --group api --no-emit-project > /tmp/requis.txt \
     && pip install --no-cache-dir -r /tmp/requis.txt \
-    && rm /tmp/requis.txt
+    && rm /tmp/requis.txt \
+    && python -c "import transformers, vllm; assert transformers.__version__ < '5', \
+       f'transformers {transformers.__version__} est incompatible avec vLLM'"
 
 COPY src/ ./src/
 RUN pip install --no-cache-dir --no-deps -e .

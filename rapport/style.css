@@ -1,0 +1,242 @@
+/* Feuille de style du rapport technique.
+   Cible : impression A4, 20 pages maximum. Les choix sont dictés par la
+   lisibilité d'un document technique lu sur papier, pas par l'esthétique. */
+
+@page {
+  size: A4;
+  margin: 20mm 18mm 18mm 18mm;
+}
+
+:root {
+  --encre: #1a1a1a;
+  --gris: #555;
+  --trait: #d4d4d4;
+  --accent: #2a78d6;
+  --alerte: #c0392b;
+  --fond-note: #f6f8fa;
+}
+
+html {
+  font-size: 10.5pt;
+}
+
+body {
+  font-family: "Source Serif 4", "Charter", Georgia, serif;
+  color: var(--encre);
+  line-height: 1.45;
+  max-width: none;
+  margin: 0;
+  text-align: justify;
+  hyphens: auto;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.2;
+  page-break-after: avoid;
+}
+
+h1 {
+  font-size: 20pt;
+  margin: 0 0 0.2em;
+  letter-spacing: -0.01em;
+}
+
+/* Chaque grande partie commence sur une nouvelle page : un rapport dont les
+   sections démarrent en bas de page se lit mal. */
+h2 {
+  font-size: 14pt;
+  margin: 1.6em 0 0.5em;
+  padding-bottom: 0.25em;
+  border-bottom: 1.5px solid var(--accent);
+  page-break-before: always;
+}
+
+h2:first-of-type,
+h2.sans-saut {
+  page-break-before: auto;
+}
+
+h3 {
+  font-size: 11.5pt;
+  margin: 1.1em 0 0.35em;
+  color: #24405c;
+}
+
+h4 {
+  font-size: 10.5pt;
+  margin: 0.9em 0 0.25em;
+  font-weight: 600;
+}
+
+p {
+  margin: 0 0 0.55em;
+}
+
+/* Un tableau coupé entre deux pages perd son en-tête et devient illisible. */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.7em 0 1em;
+  font-size: 9pt;
+  page-break-inside: avoid;
+  font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+th {
+  background: var(--fond-note);
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1.5px solid var(--trait);
+}
+
+th, td {
+  padding: 4px 7px;
+  border-bottom: 0.5px solid var(--trait);
+  vertical-align: top;
+}
+
+td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Un tableau dont toutes les colonnes sont textuelles ne doit pas être aligné
+   à droite : la classe est posée à la main dans le document. */
+table.texte td {
+  text-align: left;
+}
+
+code, pre {
+  font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace;
+  font-size: 8.5pt;
+}
+
+code {
+  background: var(--fond-note);
+  padding: 0.5px 3px;
+  border-radius: 2px;
+}
+
+pre {
+  background: var(--fond-note);
+  border-left: 2.5px solid var(--accent);
+  padding: 7px 10px;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  line-height: 1.35;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+blockquote {
+  margin: 0.7em 0;
+  padding: 6px 12px;
+  background: var(--fond-note);
+  border-left: 2.5px solid var(--gris);
+  color: #333;
+  page-break-inside: avoid;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+ul, ol {
+  margin: 0 0 0.6em;
+  padding-left: 1.3em;
+}
+
+li {
+  margin-bottom: 0.15em;
+}
+
+strong {
+  font-weight: 600;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+hr {
+  border: none;
+  border-top: 0.5px solid var(--trait);
+  margin: 1.2em 0;
+}
+
+/* Page de titre */
+.titre {
+  page-break-after: always;
+  padding-top: 45mm;
+  text-align: left;
+}
+
+.titre .surtitre {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 10pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gris);
+  margin-bottom: 1.2em;
+}
+
+.titre h1 {
+  font-size: 27pt;
+  line-height: 1.1;
+  margin-bottom: 0.35em;
+}
+
+.titre .sous-titre {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 12.5pt;
+  color: var(--gris);
+  font-weight: 400;
+  margin-bottom: 3em;
+}
+
+.titre .signature {
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 10pt;
+  color: var(--encre);
+  line-height: 1.7;
+}
+
+.titre .avertissement {
+  margin-top: 4em;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 9pt;
+  color: var(--alerte);
+  border-left: 2.5px solid var(--alerte);
+  padding-left: 10px;
+  text-align: left;
+}
+
+/* Encadrés de résultat */
+.chiffre-cle {
+  background: var(--fond-note);
+  border-left: 3px solid var(--alerte);
+  padding: 8px 12px;
+  margin: 0.9em 0;
+  page-break-inside: avoid;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 9.5pt;
+}
+
+.sommaire {
+  page-break-after: always;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: 10pt;
+}
+
+.sommaire ol {
+  padding-left: 1.5em;
+}
+
+.sommaire li {
+  margin-bottom: 0.3em;
+}
