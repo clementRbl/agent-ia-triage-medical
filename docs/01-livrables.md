@@ -66,7 +66,7 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
       67 Mo, avec sa carte de modèle, ses métriques et ses limites d'usage
 - [x] **L3** — endpoint déployé et mesuré :
       <https://clement-rbl--triage-chsa-service.modal.run>
-      (protégé par clé, latence p95 2 560 ms, journal d'audit persistant)
+      (protégé par clé, latence p95 2 306 ms, journal d'audit persistant)
 - [x] **L4** — workflows verts : lint, format, types, tests, intégrité des
       données, **et déploiement automatique** depuis `main`
 - [x] **L5** — [rapport technique](../rapport/Reboul_Clement_5_Rapport_082026.pdf),
