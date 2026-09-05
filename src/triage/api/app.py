@@ -19,7 +19,9 @@ from pathlib import Path
 from typing import Annotated, Any, Final
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.responses import HTMLResponse
 
+from triage.api.demo import PAGE
 from triage.api.journal import CHEMIN_DEFAUT, Journal, verifier_chaine
 from triage.api.moteur import moteur_depuis_environnement
 from triage.api.questionnaire import Entretien, Question
@@ -141,6 +143,18 @@ def _etat(session: str, entretien: Entretien, courant: ServiceTriage) -> EtatEnt
         triage=_triage_sortie(evaluation),
         questions_posees=len(entretien.questions_posees),
     )
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def demonstration() -> str:
+    """Page de demonstration : le questionnaire adaptatif, deroule pas a pas.
+
+    Non protegee, et sans consequence : elle ne contient aucune donnee et
+    n'appelle l'API qu'avec la cle que le visiteur saisit lui-meme. Une racine
+    qui repondrait 404 laisserait au contraire penser que le service est en
+    panne -- c'est la premiere adresse que l'on essaie.
+    """
+    return PAGE
 
 
 @app.get("/sante", tags=["exploitation"])

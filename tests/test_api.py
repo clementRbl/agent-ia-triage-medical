@@ -16,6 +16,17 @@ from triage.schema import NiveauPriorite
 
 
 @pytest.fixture
+def client_protege(tmp_path, monkeypatch):
+    """Service exigeant une clé, pour les contrôles d'accès."""
+    monkeypatch.setenv("TRIAGE_MOTEUR", "regles")
+    monkeypatch.setenv("TRIAGE_SANS_ANONYMISATION", "1")
+    monkeypatch.setenv("TRIAGE_JOURNAL", str(tmp_path / "journal.jsonl"))
+    monkeypatch.setenv("TRIAGE_CLES_API", "cle-de-test,seconde-cle")
+    with TestClient(app) as client:
+        yield client
+
+
+@pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("TRIAGE_MOTEUR", "regles")
     monkeypatch.setenv("TRIAGE_SANS_ANONYMISATION", "1")
@@ -209,15 +220,6 @@ class TestAudit:
 
 
 class TestProtection:
-    @pytest.fixture
-    def client_protege(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("TRIAGE_MOTEUR", "regles")
-        monkeypatch.setenv("TRIAGE_SANS_ANONYMISATION", "1")
-        monkeypatch.setenv("TRIAGE_JOURNAL", str(tmp_path / "journal.jsonl"))
-        monkeypatch.setenv("TRIAGE_CLES_API", "cle-de-test,seconde-cle")
-        with TestClient(app) as client:
-            yield client
-
     def test_sans_cle_l_acces_est_refuse(self, client_protege):
         assert client_protege.post("/triage", json=DOSSIER_GRAVE).status_code == 401
 
@@ -287,3 +289,45 @@ class TestChargeVLLM:
     def test_l_instruction_est_transmise_telle_quelle(self, moteur):
         charge = moteur.charge("Patient de 40 ans.")
         assert charge["messages"] == [{"role": "user", "content": "Patient de 40 ans."}]
+
+
+class TestPageDeDemonstration:
+    """La racine du service.
+
+    Une racine qui repond 404 fait croire a une panne : c'est la premiere
+    adresse qu'on essaie, et c'est celle qu'on donne pour une demonstration.
+    """
+
+    def test_la_racine_sert_une_page(self, client):
+        reponse = client.get("/")
+        assert reponse.status_code == 200
+        assert reponse.headers["content-type"].startswith("text/html")
+
+    def test_la_page_est_accessible_sans_cle(self, client_protege):
+        """Elle ne contient aucune donnee : c'est le visiteur qui apporte la sienne."""
+        assert client_protege.get("/").status_code == 200
+
+    def test_les_limites_d_usage_sont_affichees(self, client):
+        """Un utilisateur qui ignore ce que l'outil ne sait pas faire lui fait confiance."""
+        page = client.get("/").text
+        assert "pas un dispositif médical" in page
+        assert "non validée par un clinicien" in page
+
+    def test_la_page_n_appelle_aucune_ressource_externe(self, client):
+        """Un service de santé ne fait pas dépendre son interface d'un tiers."""
+        page = client.get("/").text
+        assert "http://" not in page.replace("http://127.0.0.1", "")
+        assert "https://" not in page
+
+    def test_la_page_ne_porte_aucune_cle(self, client_protege):
+        page = client_protege.get("/").text
+        assert "cle-de-test" not in page
+        assert "seconde-cle" not in page
+
+    def test_le_delai_de_reveil_est_annonce(self, client):
+        """Sans message, un démarrage à froid de deux minutes ressemble à une panne."""
+        assert "deux minutes" in client.get("/").text
+
+    def test_la_page_n_apparait_pas_dans_le_schema(self, client):
+        """Le schéma OpenAPI décrit une API, pas une page HTML."""
+        assert "/" not in client.get("/openapi.json").json()["paths"]
