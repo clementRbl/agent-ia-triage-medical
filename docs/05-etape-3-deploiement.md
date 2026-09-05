@@ -219,7 +219,7 @@ Procédure complète et secrets à renseigner : `deploiement/README.md`.
 | Robustesse aux saisies fautives | ✅ | 8 cas sur 8 refusés en 422, jamais en 500 |
 | Déploiement automatisé et reproductible | ✅ | workflow, image Docker, procédure écrite |
 | Retour arrière | ✅ | l'adaptateur est servi à chaud depuis le Hub : il suffit de repointer `TRIAGE_ADAPTATEUR` |
-| Latence p95 sous les trois secondes | ✅ | 2 560 ms séquentiel, 2 675 ms sous charge |
+| Latence p95 sous les trois secondes | ✅ | 2 306 ms séquentiel, 2 532 ms sous charge |
 | Endpoint accessible et mesuré | ✅ | `clement-rbl--triage-chsa-service.modal.run` |
 | **Taux de sous-triage critique sous le seuil** | ❌ | **8,5 % [5,4 % ; 13,2 %]** pour le modèle seul |
 

@@ -173,24 +173,47 @@ class Client:
         self.url = url.rstrip("/")
         self.entetes = {"X-Cle-Api": cle} if cle else {}
         self.delai = delai
+        # Un seul client pour toute la campagne. En ouvrir un par requete
+        # multiplierait les poignees de main TLS et gonflerait les latences
+        # mesurees d'un cout que l'utilisateur reel ne paie pas.
+        #
+        # Les redirections sont suivies : pendant un demarrage a froid,
+        # l'hebergeur repond 303 vers une URL d'attente plutot que de faire
+        # patienter la connexion. Un navigateur la suit ; le client de mesure
+        # doit se comporter comme lui, puisque c'est l'experience reelle.
+        self.session = httpx.Client(headers=self.entetes, timeout=delai, follow_redirects=True)
 
-    def _client(self) -> httpx.Client:
-        # Les redirections doivent etre suivies : pendant un demarrage a froid,
-        # l'hebergeur repond 303 vers une URL d'attente au lieu de faire
-        # patienter la connexion. Un client qui ne les suit pas voit une erreur
-        # la ou un navigateur verrait la reponse -- et c'est le comportement du
-        # navigateur qui fait foi, puisque c'est celui de l'utilisateur.
-        return httpx.Client(headers=self.entetes, timeout=self.delai, follow_redirects=True)
+    def fermer(self) -> None:
+        self.session.close()
 
-    def triage(self, dossier: dict[str, Any]) -> tuple[float, httpx.Response]:
+    def _appeler(self, methode: str, chemin: str, **options: Any) -> httpx.Response:
+        """Emet la requete, avec une seule reprise sur coupure de transport.
+
+        Un proxy ferme parfois une connexion maintenue ouverte, et la requete
+        echoue avant meme d'atteindre le service. Ce n'est pas une panne du
+        service. Une seule reprise, cependant : au-dela, on masquerait une
+        instabilite reelle.
+        """
+        try:
+            return self.session.request(methode, f"{self.url}{chemin}", **options)
+        except httpx.TransportError:
+            return self.session.request(methode, f"{self.url}{chemin}", **options)
+
+    def triage(self, dossier: dict[str, Any]) -> tuple[float, httpx.Response | None]:
+        """Renvoie la latence et la reponse ; None si l'appel n'a pas abouti.
+
+        Une coupure reseau ne doit pas interrompre la campagne : elle se compte
+        comme un echec, et les mesures deja acquises restent exploitables.
+        """
         debut = time.perf_counter()
-        with self._client() as client:
-            reponse = client.post(f"{self.url}/triage", json=dossier)
+        try:
+            reponse: httpx.Response | None = self._appeler("POST", "/triage", json=dossier)
+        except httpx.HTTPError:
+            reponse = None
         return (time.perf_counter() - debut) * 1000, reponse
 
     def get(self, chemin: str) -> httpx.Response:
-        with self._client() as client:
-            return client.get(f"{self.url}{chemin}")
+        return self._appeler("GET", chemin)
 
     def attendre_disponibilite(self, delai: float = 600.0) -> float:
         """Sonde /sante jusqu'a reponse, et renvoie le temps d'allumage.
@@ -218,6 +241,8 @@ def mesurer_demarrage(client: Client) -> float:
     serait trompeur.
     """
     latence, reponse = client.triage(DOSSIERS[0])
+    if reponse is None:
+        raise SystemExit("Le premier triage n'a pas abouti : service injoignable.")
     reponse.raise_for_status()
     return round(latence, 1)
 
@@ -228,7 +253,7 @@ def mesurer_sequentiel(client: Client, appels: int) -> tuple[Latences, dict[str,
     niveaux: dict[str, int] = {}
     for index in range(appels):
         latence, reponse = client.triage(DOSSIERS[index % len(DOSSIERS)])
-        if reponse.status_code != 200:
+        if reponse is None or reponse.status_code != 200:
             echecs += 1
             continue
         mesures.append(latence)
@@ -244,7 +269,7 @@ def mesurer_concurrent(client: Client, appels: int, parallelisme: int) -> Latenc
 
     def un_appel(index: int) -> tuple[float, int]:
         latence, reponse = client.triage(DOSSIERS[index % len(DOSSIERS)])
-        return latence, reponse.status_code
+        return latence, reponse.status_code if reponse is not None else 0
 
     with ThreadPoolExecutor(max_workers=parallelisme) as executeur:
         for latence, code in executeur.map(un_appel, range(appels)):
@@ -260,12 +285,12 @@ def mesurer_robustesse(client: Client) -> list[dict[str, Any]]:
     resultats = []
     for nom, charge, attendu in ENTREES_FAUTIVES:
         dossier = {"langue": "fr", **charge}
-        try:
-            _, reponse = client.triage(dossier)
+        _, reponse = client.triage(dossier)
+        if reponse is None:
+            obtenu, detail = 0, "appel non abouti"
+        else:
             obtenu = reponse.status_code
             detail = reponse.json().get("niveau") if obtenu == 200 else None
-        except httpx.HTTPError as erreur:
-            obtenu, detail = 0, str(erreur)
         resultats.append(
             {
                 "cas": nom,
@@ -343,6 +368,8 @@ def main() -> int:
     print("traçabilité…", flush=True)
     rapport.tracabilite = verifier_tracabilite(client)
     print(f"  {rapport.tracabilite}\n")
+
+    client.fermer()
 
     args.sortie.parent.mkdir(parents=True, exist_ok=True)
     args.sortie.write_text(

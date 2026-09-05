@@ -582,13 +582,12 @@ l'expérience de personne.
 
 | | Moyenne | Médiane | p90 | p95 | Maximum | Échecs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Séquentiel (30 appels) | 2 002 ms | 2 051 ms | 2 558 ms | **2 560 ms** | 2 732 ms | 0 |
-| 8 requêtes en parallèle | 2 092 ms | 2 172 ms | 2 594 ms | **2 675 ms** | 2 866 ms | 0 |
+| Séquentiel (24 appels) | 1 774 ms | 1 854 ms | 2 305 ms | **2 306 ms** | 2 306 ms | 0 |
+| 8 requêtes en parallèle | 1 965 ms | 1 955 ms | 2 492 ms | **2 532 ms** | 2 882 ms | 0 |
 
 La chaîne de livraison rejoue ces mesures après chaque déploiement, depuis un
-runner distinct : 2 023 ms de médiane séquentielle et 2 001 ms sous charge lors
-du dernier passage. **Les chiffres ci-dessus ne dépendent donc pas du poste qui
-les a produits.**
+runner distinct : 1 876 ms de médiane séquentielle lors du dernier passage.
+**Les chiffres ci-dessus ne dépendent donc pas du poste qui les a produits.**
 
 **Le passage à huit requêtes simultanées ne coûte que 6 % de latence
 médiane.** C'est l'apport concret de vLLM : le traitement par lots continu
@@ -641,7 +640,11 @@ réelle reste très en deçà des 30 $ mensuels gratuits.
 
 Pour référence, les mêmes mesures sur poste local (RTX 3080, sans trajet
 réseau) donnent 1 160 ms de médiane : le coût de l'hébergement distant est donc
-d'environ 900 ms.
+d'environ 700 ms.
+
+Une précision qui a son importance : le client de mesure **réutilise une seule
+connexion**. En ouvrir une par requête ajoutait une poignée de main TLS que
+l'utilisateur réel ne paie pas, et gonflait les latences d'environ 200 ms.
 
 ### Un défaut que seule la mesure de bout en bout pouvait révéler
 
@@ -866,7 +869,7 @@ CHSA plutôt qu'un corpus anglophone générique.
 | Journal d'audit complet, sans PII, infalsifiable | ✅ 4 formes d'altération détectées |
 | Limites d'usage documentées et exposées | ✅ |
 | Robustesse aux saisies fautives | ✅ 8 / 8 |
-| Latence p95 sous les trois secondes | ✅ 2 560 ms séquentiel, 2 675 ms sous charge |
+| Latence p95 sous les trois secondes | ✅ 2 306 ms séquentiel, 2 532 ms sous charge |
 | Déploiement automatisé et reproductible | ✅ endpoint public, livraison depuis `main` |
 | Retour arrière | ✅ adaptateur servi à chaud depuis le Hub |
 | **Taux de sous-triage critique sous le seuil** | ❌ **8,5 % [5,4 ; 13,2]** — seuil non fixé |
