@@ -18,8 +18,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Final
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import HTMLResponse
+from fastapi.security import APIKeyHeader
 
 from triage.api.demo import PAGE
 from triage.api.journal import CHEMIN_DEFAUT, Journal, verifier_chaine
@@ -51,13 +52,81 @@ LIMITES: Final[str] = (
     "sont hors périmètre."
 )
 
+# Mode d'emploi affiche en tete de la documentation interactive. Une API qu'il
+# faut deviner n'est pas utilisable, et le SIH du CHSA doit pouvoir s'y brancher
+# sans poser de question.
+DESCRIPTION: Final[str] = f"""
+⚠️ **{LIMITES}**
+
+---
+
+### Avant tout : s'authentifier
+
+Toutes les routes sauf `/sante` exigent une clé. Cliquez sur **Authorize**
+(cadenas, en haut à droite), collez la clé, validez. Elle sera jointe
+automatiquement à chaque appel.
+
+`X-Cle-Api` est le **nom de l'en-tête HTTP**, pas la valeur à saisir.
+
+### Deux façons de trier
+
+**1. Le questionnaire adaptatif** — pour un poste d'accueil.
+
+1. `POST /entretiens` → renvoie un `session` et la première question.
+2. `POST /entretiens/{{session}}/reponses` → renvoyez la `cle` de la question
+   et votre `valeur`, toujours sous forme de chaîne (`"87"`, `"oui"`, `"37,5"`).
+   Répétez tant que `termine` vaut `false`.
+3. Quand `termine` passe à `true`, la réponse porte le champ `triage`.
+
+Le recueil **s'arrête dès qu'un critère d'urgence maximale est rempli** :
+poursuivre ne pourrait plus abaisser le niveau, seulement retarder la prise en
+charge.
+
+**2. Le triage direct** — `POST /triage`, pour un système qui détient déjà le
+dossier. Des exemples prêts à envoyer sont proposés sous le champ de saisie.
+
+### Lire la réponse
+
+| Champ | Sens |
+| --- | --- |
+| `niveau` | la priorité retenue, celle qui fait foi |
+| `niveau_modele` | ce qu'a annoncé le modèle affiné |
+| `niveau_regles` | ce qu'a calculé le barème explicite |
+| `escalade` | vrai si le garde-fou a **relevé** la priorité du modèle |
+| `criteres` | les critères du barème effectivement remplis |
+
+Le garde-fou n'agit que dans le sens de la sécurité : si le modèle annonce
+moins grave que le barème, la priorité est relevée ; s'il annonce plus grave,
+sa prudence est conservée.
+
+### Traçabilité
+
+`GET /audit/{{session}}` reconstitue un entretien. `GET /audit` vérifie que le
+journal n'a pas été altéré : chaque entrée porte l'empreinte de la précédente.
+
+### Démonstration
+
+Une interface complète est servie à la racine : [`/`](/).
+"""
+
+
+# Declare comme schema de securite plutot que comme simple en-tete : la
+# documentation interactive expose alors un bouton « Authorize » ou la cle se
+# saisit une fois pour toutes, au lieu d'un champ a retaper a chaque appel.
+schema_cle = APIKeyHeader(
+    name=ENTETE_CLE,
+    auto_error=False,
+    scheme_name="Clé de service",
+    description="Collez ici la clé fournie par l'administrateur du service.",
+)
+
 
 def _cles_autorisees() -> set[str]:
     brut = os.environ.get("TRIAGE_CLES_API", "")
     return {cle.strip() for cle in brut.split(",") if cle.strip()}
 
 
-def verifier_cle(cle: Annotated[str | None, Header(alias=ENTETE_CLE)] = None) -> None:
+def verifier_cle(cle: Annotated[str | None, Depends(schema_cle)] = None) -> None:
     """Refuse l'appel si la cle presentee n'est pas connue.
 
     Sans cle configuree le service reste ouvert : c'est le mode developpement
@@ -87,7 +156,9 @@ async def cycle_de_vie(app: FastAPI) -> Any:
 
 app = FastAPI(
     title="Agent d'aide au triage — CHSA",
-    description=LIMITES,
+    # `summary` n'est pas repris : il ferait doublon avec l'avertissement en
+    # tete de description, qui est mis en forme et donc plus lisible.
+    description=DESCRIPTION,
     version=VERSION_SERVICE,
     lifespan=cycle_de_vie,
 )

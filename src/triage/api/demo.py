@@ -94,7 +94,8 @@ PAGE: Final[str] = """<!doctype html>
     border: 1px solid var(--trait);
   }
   .meta { font-size: .8rem; color: var(--gris); margin-top: .9rem; }
-  .meta code { background: var(--fond); padding: 1px 5px; border-radius: 3px; }
+  .meta code, .aide code { background: var(--fond); padding: 1px 5px; border-radius: 3px; }
+  details summary { color: var(--accent); font-size: .87rem; }
   .escalade {
     margin-top: .9rem; padding: .6rem .8rem; background: var(--alerte);
     border-left: 3px solid var(--mod); border-radius: 0 4px 4px 0; font-size: .87rem;
@@ -129,17 +130,32 @@ PAGE: Final[str] = """<!doctype html>
   </header>
 
   <div class="carte" id="carte-cle">
-    <label for="cle">Clé d'accès
-      <span class="aide">— l'endpoint est protégé ; la clé reste dans cet onglet</span>
-    </label>
+    <label for="cle">Clé d'accès au service</label>
+    <p class="aide" style="margin:-.2rem 0 .6rem">
+      Le service est protégé : collez la clé qui vous a été remise. Elle reste
+      dans cet onglet et n'est jamais enregistrée sur le serveur.
+    </p>
     <div class="rangee">
-      <input type="password" id="cle" autocomplete="off" placeholder="X-Cle-Api">
-      <button id="valider-cle">Entrer</button>
+      <input type="password" id="cle" autocomplete="off"
+             placeholder="collez la clé ici">
+      <button id="valider-cle">Commencer</button>
     </div>
     <p class="erreur" id="erreur-cle" hidden></p>
+    <details style="margin-top:1rem">
+      <summary>Vous n'avez pas de clé ?</summary>
+      <p class="aide" style="margin:.5rem 0 0">
+        Elle est détenue par l'administrateur du service. Techniquement, elle
+        voyage dans l'en-tête HTTP <code>X-Cle-Api</code> — c'est le nom de
+        l'en-tête, pas la valeur à saisir.
+      </p>
+    </details>
   </div>
 
   <div class="carte" id="carte-entretien" hidden>
+    <p class="aide" id="mode-emploi">
+      Répondez aux questions posées. Elles s'adaptent au motif indiqué, et le
+      recueil s'arrête dès qu'un critère d'urgence maximale est rempli.
+    </p>
     <p class="progression" id="progression"></p>
     <div id="zone-question"></div>
     <p class="attente" id="attente" hidden></p>
@@ -163,6 +179,7 @@ PAGE: Final[str] = """<!doctype html>
     <span class="point vert" id="voyant"></span><span id="etat-service">service</span>
     · <a href="/docs">documentation de l'API</a>
     · <a href="/openapi.json">schéma OpenAPI</a>
+    · <a href="/audit">intégrité du journal</a>
   </p>
 </main>
 
