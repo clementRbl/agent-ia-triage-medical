@@ -555,7 +555,7 @@ et le premier appel suivant paie un démarrage à froid.
 | Étape | Contrôle |
 | --- | --- |
 | Qualité | lint, format, vérification de types sur tout le dépôt |
-| Tests | 221 tests unitaires |
+| Tests | 208 tests unitaires |
 | Intégrité des données | empreintes des manifestes, PII résiduelle, absence de fuite |
 | Déploiement | depuis `main`, uniquement si la CI y est verte |
 | Vérification | latence, robustesse et traçabilité sur le service déployé |
@@ -586,7 +586,7 @@ l'expérience de personne.
 | 8 requêtes en parallèle | 1 965 ms | 1 955 ms | 2 492 ms | **2 532 ms** | 2 882 ms | 0 |
 
 La chaîne de livraison rejoue ces mesures après chaque déploiement, depuis un
-runner distinct : 1 876 ms de médiane séquentielle lors du dernier passage.
+runner distinct : 1 750 ms de médiane séquentielle lors du dernier passage.
 **Les chiffres ci-dessus ne dépendent donc pas du poste qui les a produits.**
 
 **Le passage à huit requêtes simultanées ne coûte que 6 % de latence
@@ -599,21 +599,24 @@ latence à vide.
 
 L'hébergement gratuit éteint le conteneur après cinq minutes d'inactivité. Le
 premier appel qui suit paie donc une remise en route, mesurée en deux temps par
-la chaîne de livraison elle-même :
+la chaîne de livraison à chaque déploiement. Quatre passages successifs :
 
-| Étape | Durée |
-| --- | --- |
-| Allumage : conteneur, vLLM, chargement du modèle | **122 s** |
-| Premier triage : chargement de l'adaptateur puis génération | **27 s** |
-| **Total pour le premier appel sur conteneur éteint** | **≈ 149 s** |
+| Étape | Médiane | Étendue observée |
+| --- | --- | --- |
+| Allumage : conteneur, vLLM, chargement du modèle | **119 s** | 95 – 177 s |
+| Premier triage : chargement de l'adaptateur puis génération | **26 s** | 25 – 37 s |
+| **Total pour le premier appel sur conteneur éteint** | **≈ 146 s** | **121 – 213 s** |
 
-**Deux minutes et demie.** C'est considérable, et c'est la contrepartie du coût
-nul. Un service réel maintiendrait au moins un conteneur allumé en permanence —
-la même plateforme le permet, contre un coût horaire continu.
+**De deux à trois minutes et demie**, selon la charge de la plateforme au
+moment du réveil. C'est considérable, et c'est la contrepartie du coût nul. Un
+service réel maintiendrait au moins un conteneur allumé en permanence — la même
+plateforme le permet, contre un coût horaire continu.
 
-Ces deux durées sont rapportées séparément plutôt qu'agrégées à la latence
-nominale : les mélanger donnerait une moyenne que rien ne permettrait
-d'interpréter.
+L'étendue est donnée parce qu'elle est large : annoncer la seule médiane
+laisserait croire à une durée stable, quand un lecteur qui reproduirait la
+mesure peut tomber sur le double. Ces deux durées sont par ailleurs rapportées
+séparément de la latence nominale : les agréger donnerait une moyenne que rien
+ne permettrait d'interpréter.
 
 ### Le choix du GPU s'est fait sur mesure, pas sur catalogue
 
@@ -761,9 +764,9 @@ partiel obtiendra des priorités systématiquement hautes.
 seuils physiologiques diffèrent, et un modèle entraîné sur des bornes adultes y
 serait dangereux.
 
-**Le premier appel après une période creuse coûte deux minutes et demie.**
-L'hébergement gratuit éteint le conteneur ; un service réel en maintiendrait un
-allumé, contre un coût horaire continu.
+**Le premier appel après une période creuse coûte de deux à trois minutes et
+demie.** L'hébergement gratuit éteint le conteneur ; un service réel en
+maintiendrait un allumé, contre un coût horaire continu.
 
 **L'état des entretiens est en mémoire.** Un redémarrage du conteneur perd les
 entretiens en cours — acceptable pour un POC, à corriger avant tout pilote.

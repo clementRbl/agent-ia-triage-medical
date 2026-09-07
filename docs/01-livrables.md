@@ -70,7 +70,7 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 - [x] **L4** — workflows verts : lint, format, types, tests, intégrité des
       données, **et déploiement automatique** depuis `main`
 - [x] **L5** — [rapport technique](../rapport/Reboul_Clement_5_Rapport_082026.pdf),
-      **19 pages** sur 20 autorisées, fabriqué de façon reproductible
+      **20 pages** sur 20 autorisées, fabriqué de façon reproductible
       (`uv run python scripts/construire_rapport.py`)
 - [ ] Archive zip nommée selon la convention
 
