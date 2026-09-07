@@ -64,7 +64,7 @@ Trois jobs sur chaque PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)) 
 | Job | Contrôle |
 |---|---|
 | Lint, format et types | `ruff check`, `ruff format --check` et `ty check` sur tout le dépôt, notebooks compris |
-| Tests | 208 tests unitaires |
+| Tests | plus de 200 tests unitaires |
 | Intégrité du jeu de données | empreintes des manifestes, seuil de PII résiduelle, absence de fuite entre les jeux |
 
 Un quatrième workflow ([deploiement.yml](.github/workflows/deploiement.yml))
