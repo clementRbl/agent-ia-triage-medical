@@ -58,6 +58,33 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 
 > ⚠️ `mmaaaa` = **mois + année de démarrage du projet**, pas la date de rendu.
 
+### Fabrication
+
+```bash
+uv run python scripts/construire_rapport.py   # le PDF, si besoin
+uv run python scripts/construire_archive.py   # l'archive complète
+```
+
+L'archive est écrite dans `outputs/livrables/`, hors du dépôt. Ce que chaque
+entrée contient :
+
+| Entrée | Contenu | Taille |
+|---|---|---|
+| `1_Dataset` | parquet SFT et DPO, export JSONL, carte du jeu de données | 12 Mo |
+| `2_Modele` | adaptateur LoRA final, tokenizer, gabarit, carte de modèle | 67 Mo |
+| `3_Endpoint` | Dockerfile, point d'entrée, fonction distante, procédure | 15 Ko |
+| `4_CICD` | les deux workflows GitHub Actions | 3 Ko |
+| `5_Rapport` | le PDF, 20 pages | 0,5 Mo |
+
+Trois choses **n'y sont pas**, volontairement :
+
+- **le modèle de base** (`Qwen3-1.7B-Base`, 3,4 Go) — il n'est pas à
+  redistribuer, l'adaptateur se pose dessus après téléchargement ;
+- **l'adaptateur de référence du DPO** — artefact interne au calcul de la
+  divergence, sans usage pour qui reçoit le livrable, et aussi lourd que
+  l'adaptateur utile ;
+- **la clé d'accès au service** — elle se remet séparément.
+
 ## Checklist de rendu
 
 - [x] **L1** — dataset versionné en parquet + [carte documentée](../data/processed/README.md)
@@ -72,7 +99,8 @@ Archive : `Agent_IA_Triage_Medical_Reboul_Clement.zip`
 - [x] **L5** — [rapport technique](../rapport/Reboul_Clement_5_Rapport_082026.pdf),
       **20 pages** sur 20 autorisées, fabriqué de façon reproductible
       (`uv run python scripts/construire_rapport.py`)
-- [ ] Archive zip nommée selon la convention
+- [x] Archive zip nommée selon la convention, fabriquée de façon reproductible
+      (`uv run python scripts/construire_archive.py`)
 
 ### Adresses des livrables en ligne
 

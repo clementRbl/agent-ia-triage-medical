@@ -555,7 +555,7 @@ et le premier appel suivant paie un démarrage à froid.
 | Étape | Contrôle |
 | --- | --- |
 | Qualité | lint, format, vérification de types sur tout le dépôt |
-| Tests | 208 tests unitaires |
+| Tests | plus de 200 tests unitaires |
 | Intégrité des données | empreintes des manifestes, PII résiduelle, absence de fuite |
 | Déploiement | depuis `main`, uniquement si la CI y est verte |
 | Vérification | latence, robustesse et traçabilité sur le service déployé |
