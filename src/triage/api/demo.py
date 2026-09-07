@@ -142,12 +142,25 @@ PAGE: Final[str] = """<!doctype html>
     </div>
     <p class="erreur" id="erreur-cle" hidden></p>
     <details style="margin-top:1rem">
-      <summary>Vous n'avez pas de clé ?</summary>
-      <p class="aide" style="margin:.5rem 0 0">
-        Elle est détenue par l'administrateur du service. Techniquement, elle
-        voyage dans l'en-tête HTTP <code>X-Cle-Api</code> — c'est le nom de
-        l'en-tête, pas la valeur à saisir.
-      </p>
+      <summary>C'est quoi, cette clé ? D'où vient-elle ?</summary>
+      <div class="aide" style="margin:.5rem 0 0">
+        <p><strong>Ce que c'est.</strong> Une chaîne de 43 caractères tirée au
+        sort, partagée par tous ceux qui ont le droit d'essayer le service. Ce
+        n'est pas un compte : le service ne sait pas qui appelle, seulement que
+        l'appelant la connaît.</p>
+        <p><strong>D'où elle vient.</strong> Elle est détenue par
+        l'administrateur du service, qui la remet de la main à la main. Elle
+        n'est écrite nulle part dans le code, ni dans le dépôt.</p>
+        <p><strong>Pourquoi elle existe.</strong> Chaque évaluation réveille et
+        occupe un processeur graphique facturé à la seconde. Et surtout, c'est
+        une démonstration de triage médical : une adresse ouverte inviterait un
+        usage réel par quelqu'un qui n'aurait pas lu les limites d'emploi
+        rappelées en haut de cette page.</p>
+        <p><strong>Où elle va.</strong> Elle reste dans cet onglet et part avec
+        chaque requête, dans l'en-tête HTTP <code>X-Cle-Api</code>.
+        <code>X-Cle-Api</code> est le nom de l'en-tête, pas la valeur à
+        saisir.</p>
+      </div>
     </details>
   </div>
 

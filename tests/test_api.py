@@ -331,3 +331,46 @@ class TestPageDeDemonstration:
     def test_la_page_n_apparait_pas_dans_le_schema(self, client):
         """Le schéma OpenAPI décrit une API, pas une page HTML."""
         assert "/" not in client.get("/openapi.json").json()["paths"]
+
+    def test_la_page_explique_d_ou_vient_la_cle(self, client):
+        """« Collez la clé » ne dit ni ce qu'elle est, ni qui la détient."""
+        page = client.get("/").text
+        assert "administrateur du service" in page
+        assert "43 caractères" in page
+
+    def test_la_page_distingue_le_nom_de_l_entete_de_sa_valeur(self, client):
+        """La confusion la plus fréquente : taper « X-Cle-Api » dans le champ."""
+        page = client.get("/").text
+        assert "nom de l'en-tête, pas la valeur" in page
+
+
+class TestDocumentationInteractive:
+    """Le mode d'emploi affiché en tête de `/docs`.
+
+    Le SIH du CHSA doit pouvoir s'y brancher sans poser de question : une API
+    qu'il faut deviner n'est pas integrable.
+    """
+
+    def test_le_mode_d_emploi_explique_la_cle(self, client):
+        description = client.get("/openapi.json").json()["info"]["description"]
+        assert "43 caractères" in description
+        assert "administrateur du service" in description
+        assert "nom de l'en-tête HTTP" in description
+
+    def test_le_mode_d_emploi_dit_pourquoi_la_cle_existe(self, client):
+        """Une protection dont on ignore la raison passe pour une tracasserie."""
+        description = client.get("/openapi.json").json()["info"]["description"]
+        assert "GPU facturé" in description
+
+    def test_la_fenetre_authorize_decrit_ce_qu_il_faut_coller(self, client):
+        """C'est le seul texte visible au moment où l'on saisit la clé."""
+        schemas = client.get("/openapi.json").json()["components"]["securitySchemes"]
+        description = schemas["Clé de service"]["description"]
+        assert "pas le nom de l'en-tête" in description
+        assert "/sante" in description
+
+    def test_le_mode_d_emploi_ne_contient_aucune_cle(self, client_protege):
+        """Un mode d'emploi qui divulgue la clé annule la protection."""
+        description = client_protege.get("/openapi.json").json()["info"]["description"]
+        assert "cle-de-test" not in description
+        assert "seconde-cle" not in description
