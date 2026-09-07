@@ -586,8 +586,9 @@ l'expérience de personne.
 | 8 requêtes en parallèle | 1 965 ms | 1 955 ms | 2 492 ms | **2 532 ms** | 2 882 ms | 0 |
 
 La chaîne de livraison rejoue ces mesures après chaque déploiement, depuis un
-runner distinct : 1 750 ms de médiane séquentielle lors du dernier passage.
-**Les chiffres ci-dessus ne dépendent donc pas du poste qui les a produits.**
+runner distinct : de **1 750 à 2 023 ms** de médiane séquentielle sur les cinq
+derniers passages. **Les chiffres ci-dessus ne dépendent donc pas du poste qui
+les a produits.**
 
 **Le passage à huit requêtes simultanées ne coûte que 6 % de latence
 médiane.** C'est l'apport concret de vLLM : le traitement par lots continu
