@@ -66,7 +66,24 @@ Toutes les routes sauf `/sante` exigent une clé. Cliquez sur **Authorize**
 (cadenas, en haut à droite), collez la clé, validez. Elle sera jointe
 automatiquement à chaque appel.
 
-`X-Cle-Api` est le **nom de l'en-tête HTTP**, pas la valeur à saisir.
+`X-Cle-Api` est le **nom de l'en-tête HTTP**, pas la valeur à saisir :
+
+```
+X-Cle-Api: la-clé-qui-vous-a-été-remise
+```
+
+**Ce qu'est cette clé.** Une chaîne de 43 caractères tirée au sort, partagée
+par tous les appelants autorisés. Ce n'est pas un compte : le service ne sait
+pas *qui* appelle, seulement que l'appelant la connaît. Elle est remise par
+l'administrateur du service et n'apparaît ni dans le code, ni dans le dépôt —
+elle est injectée à l'exécution.
+
+**Pourquoi elle existe.** Chaque évaluation occupe un GPU facturé à la seconde.
+Et c'est une démonstration de triage médical : une adresse ouverte inviterait
+un usage réel par quelqu'un qui n'aurait pas lu les limites ci-dessus.
+
+**Pas de clé ?** `/sante` répond sans authentification, et la page de
+démonstration à la racine explique la marche à suivre.
 
 ### Deux façons de trier
 
@@ -117,7 +134,11 @@ schema_cle = APIKeyHeader(
     name=ENTETE_CLE,
     auto_error=False,
     scheme_name="Clé de service",
-    description="Collez ici la clé fournie par l'administrateur du service.",
+    description=(
+        "Collez ici la clé remise par l'administrateur du service — la chaîne "
+        "elle-même, pas le nom de l'en-tête. Elle vaut pour toutes les routes "
+        "sauf `/sante`, et sera jointe automatiquement aux appels suivants."
+    ),
 )
 
 
