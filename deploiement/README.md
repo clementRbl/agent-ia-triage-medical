@@ -14,9 +14,11 @@ au CPU : vLLM y perdrait sa raison d'être et les mesures de latence tout leur
 sens.
 
 Le conteneur s'éteint après cinq minutes sans trafic. Le premier appel qui
-suit paie **122 s d'allumage** puis **27 s** de premier triage, soit environ
-deux minutes et demie. C'est le prix du coût nul ; le script de mesure rapporte
-les deux durées séparément plutôt que de les noyer dans la moyenne.
+suit paie l'allumage (médiane **119 s**, étendue 95 – 177 s sur quatre
+déploiements) puis le premier triage (médiane **26 s**, étendue 25 – 37 s),
+soit **de deux à trois minutes et demie** selon la charge de la plateforme.
+C'est le prix du coût nul ; le script de mesure rapporte les deux durées
+séparément plutôt que de les noyer dans la moyenne.
 
 Pour supprimer ce délai, `min_containers=1` sur la fonction Modal maintient un
 conteneur allumé — au prix d'un coût horaire continu.

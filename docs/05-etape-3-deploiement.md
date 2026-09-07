@@ -67,10 +67,13 @@ limitée au CPU : vLLM y perdrait sa raison d'être et les mesures de latence
 tout leur sens.
 
 Contrepartie assumée : le conteneur s'éteint après cinq minutes sans trafic.
-Le premier appel qui suit paie **122 s d'allumage** (conteneur, vLLM,
-chargement du modèle) puis **27 s** pour le premier triage, soit environ deux
-minutes et demie. C'est le prix du coût nul ; le script de mesure rapporte les
-deux durées séparément plutôt que de les noyer dans la moyenne.
+Le premier appel qui suit paie l'allumage — conteneur, vLLM, chargement du
+modèle — puis le premier triage. Mesuré sur quatre déploiements : **119 s de
+médiane** pour l'allumage (95 – 177 s) et **26 s** pour le premier triage
+(25 – 37 s), soit **de deux à trois minutes et demie**. C'est le prix du coût
+nul ; le script de mesure rapporte les deux durées séparément plutôt que de les
+noyer dans la moyenne. L'étendue est large : la donner évite de laisser croire
+à une durée stable.
 
 Un service réel maintiendrait au moins un conteneur allumé en permanence — la
 même plateforme le permet, contre un coût horaire continu.
