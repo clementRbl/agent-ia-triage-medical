@@ -420,6 +420,23 @@ class TestPageDeDemonstration:
         assert "pas un dispositif médical" in page
         assert "non validée par un clinicien" in page
 
+    def test_le_desaccord_est_annonce_dans_les_deux_sens(self, client):
+        """Un modele plus grave que le bareme decide seul du niveau servi.
+
+        Seule l'escalade etait annoncee. Dans l'autre sens, l'ecran montrait un
+        badge « urgence maximale » au-dessus des seuls criteres du bareme, de
+        niveau moindre, sans rien qui explique l'ecart.
+        """
+        page = client.get("/").text
+        assert "Priorité relevée par le garde-fou" in page
+        assert "Le modèle a été plus prudent que le barème" in page
+        assert "aucun niveau exploitable" in page
+
+    def test_les_criteres_sont_attribues_au_bareme(self, client):
+        """Sans attribution, ils passent pour la justification du niveau servi."""
+        page = client.get("/").text
+        assert "Critères objectifs retenus par le barème" in page
+
     def test_le_nom_de_l_echelle_de_tri_est_intact(self, client):
         """FRENCH est un acronyme, pas le mot anglais : il ne se traduit pas.
 
