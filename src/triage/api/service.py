@@ -23,7 +23,7 @@ from threading import Lock
 
 from triage.api.journal import Evenement, Journal
 from triage.api.moteur import Moteur
-from triage.api.questionnaire import Entretien, Question
+from triage.api.questionnaire import Entretien, Question, bornes
 from triage.schema import Constantes, Langue, NiveauPriorite
 from triage.training.evaluation import RANG, extraire_niveau
 
@@ -170,7 +170,7 @@ def appliquer_reponse(entretien: Entretien, cle: str, valeur: str) -> None:
         case "motif":
             entretien.motif = texte
         case "age":
-            entretien.age = _entier(texte, cle, 0, 120)
+            entretien.age = _entier(texte, cle, *_bornes_de(cle))
         case "sexe":
             entretien.sexe = texte
         case "signe_gravite":
@@ -182,24 +182,38 @@ def appliquer_reponse(entretien: Entretien, cle: str, valeur: str) -> None:
                 else [part.strip() for part in texte.split(",") if part.strip()]
             )
         case "temperature":
-            _poser(entretien.constantes, cle, _decimal(texte, cle, 30.0, 43.0))
+            _poser(entretien.constantes, cle, _decimal(texte, cle, *_bornes_de(cle)))
         case _ if cle in _CONSTANTES_ENTIERES:
-            _poser(entretien.constantes, cle, _entier(texte, cle, -1000, 1000))
+            _poser(entretien.constantes, cle, _entier(texte, cle, *_bornes_de(cle)))
         case _:
             raise ValueError(f"Question inconnue : {cle!r}")
+
+
+def _bornes_de(cle: str) -> tuple[float, float]:
+    """Bornes physiologiques d'une constante, telles que la question les affiche.
+
+    Le questionnaire et le triage direct doivent refuser les memes valeurs. Une
+    SpO2 a 150 % qui passerait ici ne declencherait aucun critere et ressortirait
+    en prise en charge differee : une faute de frappe produirait un triage
+    rassurant, sans la moindre erreur visible.
+    """
+    limites = bornes(cle)
+    if limites is None:
+        raise ValueError(f"{cle} : aucune borne connue pour cette constante")
+    return limites
 
 
 def _poser(constantes: Constantes, cle: str, valeur: float) -> None:
     setattr(constantes, cle, valeur)
 
 
-def _entier(texte: str, cle: str, minimum: int, maximum: int) -> int:
+def _entier(texte: str, cle: str, minimum: float, maximum: float) -> int:
     try:
         valeur = int(texte)
     except ValueError as erreur:
         raise ValueError(f"{cle} : « {texte} » n'est pas un nombre entier") from erreur
     if not minimum <= valeur <= maximum:
-        raise ValueError(f"{cle} : {valeur} hors des bornes [{minimum}, {maximum}]")
+        raise ValueError(f"{cle} : {valeur} hors des bornes [{minimum:g}, {maximum:g}]")
     return valeur
 
 

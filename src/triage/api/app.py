@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 
 from triage.api.demo import PAGE
+from triage.api.explications import PAGE_EXPLICATIONS
 from triage.api.journal import CHEMIN_DEFAUT, Journal, verifier_chaine
 from triage.api.moteur import moteur_depuis_environnement
 from triage.api.questionnaire import Entretien, Question
@@ -199,6 +200,7 @@ def _question_sortie(question: Question, langue: Langue) -> QuestionSortie:
         maximum=question.maximum,
         unite=question.unite,
         options=list(question.options(langue)),
+        aide=question.texte_aide(langue),
     )
 
 
@@ -247,6 +249,17 @@ def demonstration() -> str:
     panne -- c'est la premiere adresse que l'on essaie.
     """
     return PAGE
+
+
+@app.get("/comment-ca-marche", response_class=HTMLResponse, include_in_schema=False)
+def comment_ca_marche() -> str:
+    """Ce que fait le service, dans quel ordre, et qui decide a chaque etape.
+
+    Non protegee, pour la meme raison que la racine : elle ne porte aucune
+    donnee. Une demonstration de triage qu'on ne peut pas interroger sur son
+    propre fonctionnement demande une confiance qu'elle n'a pas justifiee.
+    """
+    return PAGE_EXPLICATIONS
 
 
 @app.get("/sante", tags=["exploitation"])
