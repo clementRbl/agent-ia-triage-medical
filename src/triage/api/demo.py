@@ -100,6 +100,11 @@ PAGE: Final[str] = """<!doctype html>
     margin-top: .9rem; padding: .6rem .8rem; background: var(--alerte);
     border-left: 3px solid var(--mod); border-radius: 0 4px 4px 0; font-size: .87rem;
   }
+  .escalade.prudence { background: var(--fond); border-left-color: var(--accent); }
+  .intitule-criteres {
+    margin: .9rem 0 0; font-size: .82rem; color: var(--gris);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
   .texte-aide {
     white-space: pre-line; margin-top: .5rem; padding: .6rem .8rem;
     background: var(--fond); border-radius: 6px; border: 1px solid var(--trait);
@@ -182,6 +187,7 @@ PAGE: Final[str] = """<!doctype html>
 
   <div class="carte" id="carte-resultat" hidden>
     <span class="niveau" id="badge"></span>
+    <p class="intitule-criteres" id="intitule-criteres" hidden></p>
     <ul class="criteres" id="criteres"></ul>
     <div class="escalade" id="escalade" hidden></div>
     <pre id="explication"></pre>
@@ -326,28 +332,67 @@ const LIBELLES = {
   differee: "PRISE EN CHARGE DIFFÉRÉE",
 };
 
+// Le desaccord entre le modele et le bareme compte dans les deux sens, et
+// aucun des deux ne doit etre masque.
+//
+// L'escalade -- le bareme releve un modele trop rassurant -- etait seule
+// annoncee. L'autre sens ne l'etait pas : un modele plus grave que le bareme
+// decide seul du niveau servi, et l'ecran affichait alors un badge « urgence
+// maximale » au-dessus des seuls criteres du bareme, de niveau moindre. Rien
+// n'expliquait l'ecart, et la page paraissait se contredire.
+function afficherDesaccord(t) {
+  const cadre = $("escalade");
+  const duBareme = LIBELLES[t.niveau_regles];
+
+  if (!t.niveau_modele) {
+    // Reponse tronquee ou format inattendu : le bareme tranche seul. Rendre
+    // « indetermine » a un agent d'accueil serait la pire des sorties.
+    cadre.hidden = false;
+    cadre.className = "escalade";
+    cadre.innerHTML =
+      `<strong>Le modèle n'a rendu aucun niveau exploitable.</strong> ` +
+      `Le barème a tranché seul : « ${duBareme} ».`;
+    return;
+  }
+  if (t.escalade) {
+    cadre.hidden = false;
+    cadre.className = "escalade";
+    cadre.innerHTML =
+      `<strong>Priorité relevée par le garde-fou.</strong> Le modèle annonçait ` +
+      `« ${LIBELLES[t.niveau_modele]} », le barème « ${duBareme} ». ` +
+      `Le plus grave des deux l'emporte.`;
+    return;
+  }
+  if (t.niveau_modele !== t.niveau_regles) {
+    cadre.hidden = false;
+    cadre.className = "escalade prudence";
+    cadre.innerHTML =
+      `<strong>Le modèle a été plus prudent que le barème.</strong> Il annonce ` +
+      `« ${LIBELLES[t.niveau_modele]} » là où le barème retient ` +
+      `« ${duBareme} ». Sa prudence est conservée : le plus grave des deux ` +
+      `l'emporte, dans les deux sens. Les critères ci-dessus sont ceux du ` +
+      `barème et ne justifient donc pas, à eux seuls, le niveau servi.`;
+    return;
+  }
+  cadre.hidden = true;
+}
+
+
 async function afficherResultat(etat) {
   const t = etat.triage;
   $("carte-entretien").hidden = true;
   $("carte-resultat").hidden = false;
   $("badge").className = "niveau " + t.niveau;
   $("badge").textContent = LIBELLES[t.niveau];
-  $("criteres").innerHTML = t.criteres.length
-    ? t.criteres.map((c) => `<li>${c}</li>`).join("")
-    : "<li>aucun critère de gravité retenu</li>";
+  $("intitule-criteres").hidden = false;
+  $("intitule-criteres").textContent = t.criteres.length
+    ? "Critères objectifs retenus par le barème"
+    : "Barème : aucun critère de gravité retenu";
+  $("criteres").innerHTML = t.criteres
+    .map((c) => `<li>${c}</li>`)
+    .join("");
   $("explication").textContent = t.explication;
-
-  // Le desaccord entre le modele et le bareme n'est jamais masque : c'est
-  // une information clinique, pas un detail d'implementation.
-  if (t.escalade) {
-    $("escalade").hidden = false;
-    $("escalade").innerHTML =
-      `<strong>Priorité relevée par le garde-fou.</strong> Le modèle annonçait ` +
-      `« ${LIBELLES[t.niveau_modele] || "aucun niveau exploitable"} », le barème ` +
-      `« ${LIBELLES[t.niveau_regles]} ». Le plus grave des deux l'emporte.`;
-  } else {
-    $("escalade").hidden = true;
-  }
+  afficherDesaccord(t);
 
   $("meta").innerHTML =
     `${etat.questions_posees} questions posées · ` +
