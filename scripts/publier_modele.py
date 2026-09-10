@@ -64,6 +64,39 @@ Le modèle **ne doit pas être servi seul**. Le service de référence le double
 d'un barème explicite qui relève la priorité lorsque le modèle annonce moins
 grave que les constantes ne le justifient.
 
+## Risques connus
+
+**Hallucinations.** Le texte d'explication est produit librement et **n'est pas
+vérifié**. Le modèle cite parfois un critère qui ne s'applique pas au tableau
+clinique fourni. Le niveau et la liste des critères exposés par le service,
+eux, sont calculés par le barème et restent justes : c'est le texte libre, et
+lui seul, qui ne doit pas être présenté à un soignant comme une justification
+auditée.
+
+**Sous-triage résiduel.** Sur des motifs jamais vus, le modèle annonce une part
+non nulle des urgences vitales à un niveau moindre (voir le tableau
+ci-dessous). C'est la raison pour laquelle il ne doit jamais être servi seul.
+
+**Biais d'apprentissage.** Trois sont identifiés et assumés :
+
+- *Biais du barème.* Les étiquettes d'entraînement sont déduites d'un barème
+  écrit par l'équipe technique et non validé cliniquement. Toute erreur de ce
+  barème a été apprise telle quelle, et aucune évaluation ne peut la révéler
+  puisqu'elle sert aussi de référence.
+- *Biais de construction.* Les cas sont générés par règles à partir d'un nombre
+  fini de motifs de recours. Ils sont par nature cohérents et complets, là où
+  un dossier réel comporte des constantes manquantes, des saisies erronées et
+  des tableaux ambigus. Les performances mesurées sont un **plafond**, pas une
+  prévision de terrain. Les motifs absents du générateur sont hors couverture.
+- *Biais de longueur.* Écarté à la source : les paires de préférence dont
+  l'étiquette d'origine repose sur la longueur de la réponse ont été exclues du
+  jeu DPO. Sans cela, l'alignement aurait appris à préférer les réponses
+  longues plutôt que les réponses justes.
+
+**Démographie.** Âge et sexe sont tirés dans des bornes plausibles par motif ;
+aucun autre attribut n'est représenté, et aucune analyse d'équité par
+sous-groupe n'a été conduite. Elle serait un préalable à tout pilote.
+
 ## Format d'entrée
 
 Le modèle attend le format exact vu à l'entraînement. Toute autre mise en

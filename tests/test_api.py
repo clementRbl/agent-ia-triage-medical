@@ -95,6 +95,31 @@ class TestTriageDirect:
         assert corps["moteur"] == "regles"
         assert corps["modele"]
 
+    def test_la_question_porte_son_aide_a_la_saisie(self, client):
+        """L'aide ne sert a rien si elle reste cote serveur : le client l'affiche."""
+        session = client.post("/entretiens", json={"langue": "fr"}).json()["session"]
+        etat = client.post(
+            f"/entretiens/{session}/reponses",
+            json={"cle": "motif", "valeur": "mal de gorge"},
+        ).json()
+        assert etat["question"]["cle"] == "age"
+        assert etat["question"]["aide"]
+
+    def test_l_aide_du_glasgow_est_servie_avec_la_question(self, client):
+        """Le seul item qui se calcule ; son bareme voyage avec lui."""
+        session = client.post("/entretiens", json={"langue": "fr"}).json()["session"]
+        for cle, valeur in (
+            ("motif", "mal de gorge"),
+            ("age", "30"),
+            ("sexe", "féminin"),
+            ("signe_gravite", "non"),
+        ):
+            etat = client.post(
+                f"/entretiens/{session}/reponses", json={"cle": cle, "valeur": valeur}
+            ).json()
+        assert etat["question"]["cle"] == "glasgow"
+        assert "réponse motrice" in etat["question"]["aide"]
+
     def test_une_constante_hors_bornes_est_refusee(self, client):
         dossier = {**DOSSIER_BENIN, "constantes": {"saturation": 150}}
         assert client.post("/triage", json=dossier).status_code == 422
@@ -153,6 +178,88 @@ class TestQuestionnaire:
     def test_l_entretien_est_bilingue(self, client):
         corps = client.post("/entretiens", json={"langue": "en"}).json()
         assert "patient" in corps["question"]["libelle"].lower()
+
+
+class TestBornesDuQuestionnaire:
+    """Les bornes affichees avec la question doivent etre celles qui sont appliquees.
+
+    Une SpO2 a 150 % ne declenche aucun critere : acceptee, elle ressort en
+    prise en charge differee. Une faute de frappe produirait alors un triage
+    rassurant, sans erreur visible nulle part -- exactement la panne contre
+    laquelle la validation existe.
+    """
+
+    def _repondre(self, client, cles_valeurs):
+        session = client.post("/entretiens", json={"langue": "fr"}).json()["session"]
+        reponse = None
+        for cle, valeur in cles_valeurs:
+            reponse = client.post(
+                f"/entretiens/{session}/reponses", json={"cle": cle, "valeur": valeur}
+            )
+        assert reponse is not None
+        return reponse
+
+    PREAMBULE = (
+        ("motif", "mal de gorge"),
+        ("age", "30"),
+        ("sexe", "féminin"),
+        ("signe_gravite", "non"),
+    )
+
+    @pytest.mark.parametrize(
+        ("cle", "valeur"),
+        [
+            ("glasgow", "900"),
+            ("glasgow", "2"),
+            ("saturation", "150"),
+            ("saturation", "-5"),
+            ("frequence_respiratoire", "500"),
+            ("pression_systolique", "-800"),
+            ("frequence_cardiaque", "1000"),
+            ("douleur", "999"),
+            ("temperature", "80"),
+        ],
+    )
+    def test_une_valeur_hors_bornes_est_refusee(self, client, cle, valeur):
+        etapes = [*self.PREAMBULE]
+        neutres = {
+            "glasgow": "15",
+            "saturation": "98",
+            "frequence_respiratoire": "16",
+            "pression_systolique": "125",
+            "frequence_cardiaque": "78",
+            "temperature": "37.0",
+            "douleur": "2",
+        }
+        for suivante, neutre in neutres.items():
+            if suivante == cle:
+                break
+            etapes.append((suivante, neutre))
+        etapes.append((cle, valeur))
+        reponse = self._repondre(client, etapes)
+        assert reponse.status_code == 422
+        assert cle in reponse.json()["detail"]
+
+    def test_l_age_hors_bornes_est_refuse(self, client):
+        reponse = self._repondre(client, [("motif", "mal de gorge"), ("age", "900")])
+        assert reponse.status_code == 422
+
+    def test_les_bornes_sont_les_memes_que_celles_du_triage_direct(self):
+        """Deux portes d'entree, un seul jeu de bornes.
+
+        Elles ont diverge une fois : le questionnaire acceptait tout entre
+        -1000 et 1000 pendant que `/triage` appliquait les bornes du schema.
+        """
+        from triage.api.questionnaire import bornes
+        from triage.api.schemas import ConstantesEntree
+
+        for nom, champ in ConstantesEntree.model_fields.items():
+            declarees = {type(contrainte).__name__: contrainte for contrainte in champ.metadata}
+            minimum = declarees.get("Ge")
+            maximum = declarees.get("Le")
+            if minimum is None or maximum is None:
+                continue
+            assert bornes(nom) == (minimum.ge, maximum.le), nom
 
 
 class TestGardeFou:
@@ -342,6 +449,56 @@ class TestPageDeDemonstration:
         """La confusion la plus fréquente : taper « X-Cle-Api » dans le champ."""
         page = client.get("/").text
         assert "nom de l'en-tête, pas la valeur" in page
+
+
+class TestPageExplications:
+    """La page « comment ca marche ».
+
+    Une demonstration de triage qu'on ne peut pas interroger sur son propre
+    fonctionnement demande une confiance qu'elle n'a pas justifiee.
+    """
+
+    def test_la_page_est_servie(self, client):
+        reponse = client.get("/comment-ca-marche")
+        assert reponse.status_code == 200
+        assert reponse.headers["content-type"].startswith("text/html")
+
+    def test_elle_est_accessible_sans_cle(self, client_protege):
+        assert client_protege.get("/comment-ca-marche").status_code == 200
+
+    def test_le_questionnaire_y_renvoie(self, client):
+        """Une page que rien ne lie n'est jamais lue."""
+        assert "/comment-ca-marche" in client.get("/").text
+
+    def test_elle_n_appelle_aucune_ressource_externe(self, client):
+        page = client.get("/comment-ca-marche").text
+        assert "http://" not in page
+        assert "https://" not in page
+
+    def test_elle_ne_porte_aucune_cle(self, client_protege):
+        page = client_protege.get("/comment-ca-marche").text
+        assert "cle-de-test" not in page
+        assert "seconde-cle" not in page
+
+    def test_elle_dit_ou_le_modele_intervient_et_ou_il_n_intervient_pas(self, client):
+        """C'est la question qui decide de la confiance qu'on accorde au service."""
+        page = client.get("/comment-ca-marche").text
+        assert "une seule fois par entretien" in page
+        assert "ne conduit pas l'entretien" in page
+
+    def test_elle_enonce_le_sous_triage_mesure(self, client):
+        """Le chiffre qui a impose le garde-fou ne doit pas etre enterre."""
+        page = client.get("/comment-ca-marche").text
+        assert "17 urgences vitales sur 200" in page
+
+    def test_elle_enonce_les_limites(self, client):
+        page = client.get("/comment-ca-marche").text
+        assert "pas un dispositif médical" in page
+        assert "n'a pas été validé par un clinicien" in page
+
+    def test_elle_n_apparait_pas_dans_le_schema(self, client):
+        """Le schéma OpenAPI décrit une API, pas une page HTML."""
+        assert "/comment-ca-marche" not in client.get("/openapi.json").json()["paths"]
 
 
 class TestDocumentationInteractive:

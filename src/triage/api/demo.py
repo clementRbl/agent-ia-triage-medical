@@ -100,6 +100,10 @@ PAGE: Final[str] = """<!doctype html>
     margin-top: .9rem; padding: .6rem .8rem; background: var(--alerte);
     border-left: 3px solid var(--mod); border-radius: 0 4px 4px 0; font-size: .87rem;
   }
+  .texte-aide {
+    white-space: pre-line; margin-top: .5rem; padding: .6rem .8rem;
+    background: var(--fond); border-radius: 6px; border: 1px solid var(--trait);
+  }
   .attente { color: var(--gris); font-size: .9rem; }
   .erreur { color: var(--max); font-size: .9rem; }
   details { margin-top: .9rem; }
@@ -124,7 +128,7 @@ PAGE: Final[str] = """<!doctype html>
     <div class="avert">
       <strong>Ce n'est pas un dispositif médical.</strong> Aucun diagnostic, aucune
       prescription, aucune décision autonome. Le barème est une transposition
-      simplifiée de l'échelle FRENCH, <strong>non validée par un clinicien</strong>.
+      simplifiée de l'échelle Français, <strong>non validée par un clinicien</strong>.
       Adulte uniquement. N'y saisissez aucune donnée de patient réel.
     </div>
   </header>
@@ -193,6 +197,7 @@ PAGE: Final[str] = """<!doctype html>
     · <a href="/docs">documentation de l'API</a>
     · <a href="/openapi.json">schéma OpenAPI</a>
     · <a href="/audit">intégrité du journal</a>
+    · <a href="/comment-ca-marche">comment ça marche</a>
   </p>
 </main>
 
@@ -272,8 +277,15 @@ function afficherQuestion(etat) {
   $("progression").textContent =
     `Question ${etat.questions_posees + 1} · le recueil s'arrête dès qu'un ` +
     `critère d'urgence maximale est rempli`;
+  const aide = q.aide
+    ? `<details class="bloc-aide"><summary>Comment renseigner cette réponse ?</summary>
+         <div class="aide texte-aide" id="texte-aide"></div></details>`
+    : "";
   $("zone-question").innerHTML =
-    `<label>${q.libelle}${unite}${bornes}</label>` + champPour(q);
+    `<label>${q.libelle}${unite}${bornes}</label>` + aide + champPour(q);
+  // textContent, pas innerHTML : le texte porte des retours a la ligne et des
+  // chevrons, et il n'a aucune raison d'etre interprete comme du balisage.
+  if (q.aide) $("texte-aide").textContent = q.aide;
   $("erreur").hidden = true;
 
   const envoyer = (valeur) => repondre(q.cle, valeur);

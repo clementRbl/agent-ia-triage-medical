@@ -105,6 +105,16 @@ class QuestionSortie(BaseModel):
     maximum: float | None = None
     unite: str | None = None
     options: list[str] = Field(default_factory=list)
+    aide: Annotated[
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Mode d'emploi de la mesure, à afficher avec la question. "
+                "Peut contenir des retours à la ligne."
+            ),
+        ),
+    ]
 
 
 class TriageSortie(BaseModel):
