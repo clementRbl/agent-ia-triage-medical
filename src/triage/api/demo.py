@@ -128,7 +128,8 @@ PAGE: Final[str] = """<!doctype html>
     <div class="avert">
       <strong>Ce n'est pas un dispositif médical.</strong> Aucun diagnostic, aucune
       prescription, aucune décision autonome. Le barème est une transposition
-      simplifiée de l'échelle Français, <strong>non validée par un clinicien</strong>.
+      simplifiée de l'échelle de tri française FRENCH,
+      <strong>non validée par un clinicien</strong>.
       Adulte uniquement. N'y saisissez aucune donnée de patient réel.
     </div>
   </header>

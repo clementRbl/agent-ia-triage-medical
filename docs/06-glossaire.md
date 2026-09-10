@@ -25,6 +25,8 @@ annotées** par des humains, en indiquant laquelle est préférée.
 
 | Terme | Définition |
 |---|---|
+| **FRENCH** | *FRench Emergency Nurses Classification in Hospital* — échelle de tri élaborée par la **Société française de médecine d'urgence**. L'acronyme est construit pour former le mot *French* : c'est un nom propre, il ne se traduit pas. L'échelle officielle compte 5 niveaux, le niveau 3 étant scindé en 3A et 3B, soit 6 degrés de priorité. Le projet la **transpose aux 3 niveaux demandés par le CHSA** — c'est ce que « transposition simplifiée » signifie, et cette transposition n'a pas été validée par un clinicien. |
+| **CIMU** | *Classification infirmière des malades aux urgences* — échelle française antérieure, citée avec FRENCH comme référence des critères de gravité retenus. |
 | **LoRA** | *Low-Rank Adaptation* — n'entraîne que de petites matrices de rang faible injectées dans le modèle gelé. Réduit fortement la VRAM et la taille des poids à livrer. |
 | **PEFT** | *Parameter-Efficient Fine-Tuning* — famille de méthodes dont LoRA fait partie ; bibliothèque Hugging Face du même nom. |
 | **GRPO** | *Group Relative Policy Optimization* — alternative d'alignement citée à l'étape 2 comme option à DPO. |

@@ -420,6 +420,16 @@ class TestPageDeDemonstration:
         assert "pas un dispositif médical" in page
         assert "non validée par un clinicien" in page
 
+    def test_le_nom_de_l_echelle_de_tri_est_intact(self, client):
+        """FRENCH est un acronyme, pas le mot anglais : il ne se traduit pas.
+
+        Un remplacement automatique l'avait rendu par « l'échelle Français »,
+        qui ne designe plus rien de trouvable pour un lecteur du domaine.
+        """
+        page = client.get("/").text
+        assert "échelle de tri française FRENCH" in page
+        assert "échelle Français" not in page
+
     def test_la_page_n_appelle_aucune_ressource_externe(self, client):
         """Un service de santé ne fait pas dépendre son interface d'un tiers."""
         page = client.get("/").text
