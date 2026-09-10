@@ -7,7 +7,7 @@ Republier le modele fusionne ferait 3,4 Go pour redistribuer a l'identique
 des poids deja disponibles ; l'adaptateur en fait 67 et se recompose en une
 ligne. C'est aussi ce que vLLM sait charger directement.
 
-Prerequis : un jeton d'ecriture Hugging Face dans HF_TOKEN.
+Prerequis : une session `hf auth login`, ou un jeton d'ecriture dans HF_TOKEN.
 
 Usage :
     uv run python scripts/publier_modele.py --depot <compte>/triage-chsa-qwen3-1.7b
@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Final
 
@@ -206,13 +205,17 @@ def main() -> int:
         print(carte)
         return 0
 
-    if not os.environ.get("HF_TOKEN"):
-        raise SystemExit(
-            "HF_TOKEN absent. Créez un jeton d'écriture sur "
-            "https://huggingface.co/settings/tokens puis exportez-le."
-        )
+    from huggingface_hub import HfApi, get_token
 
-    from huggingface_hub import HfApi
+    # `get_token` resout la variable d'environnement *puis* la session ouverte
+    # par `hf auth login`. Exiger HF_TOKEN refusait la publication a qui avait
+    # deja une session valide -- et poussait a reexporter un secret a la main.
+    if get_token() is None:
+        raise SystemExit(
+            "Aucun jeton Hugging Face. Ouvrez une session avec « hf auth login », "
+            "ou exportez un jeton d'écriture dans HF_TOKEN. Les jetons se créent "
+            "sur https://huggingface.co/settings/tokens."
+        )
 
     api = HfApi()
     api.create_repo(args.depot, repo_type="model", private=args.prive, exist_ok=True)
