@@ -186,7 +186,7 @@ Signal visible dès l'entraînement — le modèle s'écarte beaucoup moins du S
 | Exactitude | 0 % | 91,92 % | 42,42 % | 64,65 % | **92,93 %** |
 | Sous-triage | — | 4,04 % | 0 % | 14,14 % | 4,04 % |
 | Sur-triage | — | 4,04 % | 57,58 % | 21,21 % | **3,03 %** |
-| Urgences identifiées | 0/31 | 31/31 | 31/31 | 13/31 | **31/31** |
+| Urgences identifiées | 0/31 | 31/31 | 31/31 | 18/31 | **31/31** |
 
 **Hypothèse confirmée.** Les paires portant sur la décision de triage étaient la
 cause des deux échecs, et non les données anglophones — la contamination

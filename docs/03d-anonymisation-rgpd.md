@@ -93,7 +93,7 @@ Corpus : les **1 011 cas cliniques uniques** de MediQAl `oeq`.
 |---|---|---|
 | Détections `PERSON` | 892 | **534** |
 | Faux positifs médicaux évités | — | **358** |
-| Textes avec PII résiduelle | 14 (1,19 %) | **2 (0,20 %)** |
+| Textes avec PII résiduelle | 11 (1,09 %) | **2 (0,20 %)** |
 
 **Entités retirées au total** : PERSON 534, FR_CIVILITE 422,
 ETABLISSEMENT_SANTE 226, FR_DATE_ABSOLUE 16, PHONE_NUMBER 4.

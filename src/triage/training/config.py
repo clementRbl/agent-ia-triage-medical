@@ -13,7 +13,7 @@ from typing import Any, Final
 
 MODELE_BASE: Final[str] = "Qwen/Qwen3-1.7B-Base"
 
-# Mesure sur les 5 000 exemples (voir notebooks/02) : p50 = 332 tokens,
+# Mesure sur les 5 000 exemples (voir docs/04b) : p50 = 332 tokens,
 # p99 = 988. A 1 024, 0,66 % des exemples sont tronques ; passer a 1 536 ne
 # recupererait que 0,64 % de plus pour 50 % de VRAM d'activations en sus.
 LONGUEUR_MAX: Final[int] = 1024
