@@ -130,7 +130,7 @@ vLLM sur GPU, protégé par l'en-tête `X-Cle-Api`.
 | Séquentiel (24 appels) | 1 854 ms | 2 306 ms |
 | 8 requêtes en parallèle | 1 955 ms | 2 532 ms |
 
-Huit requêtes simultanées ne coûtent que **6 % de latence médiane** : c'est
+Huit requêtes simultanées ne coûtent que **5 % de latence médiane** : c'est
 l'apport du traitement par lots continu de vLLM.
 
 ```bash

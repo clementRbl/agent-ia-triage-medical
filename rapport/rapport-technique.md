@@ -192,7 +192,7 @@ contexte éponymique (*maladie de*, *signe de*, *indice de*).
 | | Avant filtrage | Après filtrage |
 | --- | --- | --- |
 | Détections PERSON | 892 | 534 |
-| PII résiduelle mesurée | 1,19 % | **0,20 %** |
+| PII résiduelle mesurée | 1,09 % | **0,20 %** |
 
 Deux catégories sont **délibérément préservées** : les lieux et les durées. Un
 « séjour au Gabon » conditionne une prophylaxie antipaludique, une douleur
@@ -336,7 +336,7 @@ anglophones.
 | Exactitude | 0 % | 91,92 % | 42,42 % | 64,65 % | **92,93 %** |
 | Sous-triage | — | 4,04 % | 0 % | 14,14 % | 4,04 % |
 | Sur-triage | — | 4,04 % | 57,58 % | 21,21 % | **3,03 %** |
-| Urgences identifiées | 0/31 | 31/31 | 31/31 | 13/31 | **31/31** |
+| Urgences identifiées | 0/31 | 31/31 | 31/31 | 18/31 | **31/31** |
 
 **Hypothèse confirmée** : les paires portant sur la décision de triage étaient
 la cause des deux échecs, et non les données anglophones. La contamination
@@ -590,7 +590,7 @@ runner distinct : de **1 750 à 2 023 ms** de médiane séquentielle sur les cin
 derniers passages. **Les chiffres ci-dessus ne dépendent donc pas du poste qui
 les a produits.**
 
-**Le passage à huit requêtes simultanées ne coûte que 6 % de latence
+**Le passage à huit requêtes simultanées ne coûte que 5 % de latence
 médiane.** C'est l'apport concret de vLLM : le traitement par lots continu
 absorbe la concurrence au lieu de la sérialiser. Pour un service d'accueil où
 plusieurs postes trient en parallèle, ce comportement compte davantage que la
