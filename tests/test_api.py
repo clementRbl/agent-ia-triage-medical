@@ -459,8 +459,12 @@ class TestPageDeDemonstration:
         assert "seconde-cle" not in page
 
     def test_le_delai_de_reveil_est_annonce(self, client):
-        """Sans message, un démarrage à froid de deux minutes ressemble à une panne."""
-        assert "deux minutes" in client.get("/").text
+        """Sans message, un démarrage à froid de plusieurs minutes ressemble à une panne.
+
+        La borne haute annoncée est celle mesurée (213 s) : promettre moins
+        ferait croire à une panne pendant la dernière minute et demie.
+        """
+        assert "trois minutes et demie" in client.get("/").text
 
     def test_la_page_n_apparait_pas_dans_le_schema(self, client):
         """Le schéma OpenAPI décrit une API, pas une page HTML."""
