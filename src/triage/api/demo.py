@@ -216,15 +216,16 @@ let session = null;
 const enteteJson = () => ({ "Content-Type": "application/json", "X-Cle-Api": cle });
 
 // Le conteneur s'éteint après cinq minutes d'inactivité : le premier appel le
-// rallume et peut demander deux minutes. Sans message, l'attente ressemble à
-// une panne.
+// rallume, ce qui a pris jusqu'à 213 s en mesure. Sans message, l'attente
+// ressemble à une panne.
 async function appeler(chemin, options = {}) {
   const debut = performance.now();
   const lent = setTimeout(() => {
     $("attente").hidden = false;
     $("attente").textContent =
       "Réveil du serveur en cours… le conteneur s'éteint après cinq minutes " +
-      "d'inactivité, le premier appel peut demander jusqu'à deux minutes.";
+      "d'inactivité, le premier appel peut demander " +
+      "de deux à trois minutes et demie.";
     $("voyant").className = "point orange";
     $("etat-service").textContent = "démarrage à froid";
   }, 2500);
