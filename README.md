@@ -53,9 +53,94 @@ importe `src/triage/` : aucune logique n'y est dupliquée.
 ## Installation
 
 ```bash
-uv sync
+uv sync --group dev --group api   # tests, service local et démonstration
 uv run pytest
 ```
+
+Les dépendances sont réparties en groupes pour garder l'installation légère :
+`uv sync` seul n'installe pas FastAPI, et les tests du service échoueraient.
+Pour réentraîner le modèle (torch, environ 2,5 Go) ou déployer sur Modal,
+installer tous les groupes : `uv sync --all-groups`.
+
+## Démonstration pas à pas
+
+Toutes les commandes se lancent depuis la racine du dépôt.
+
+**1. Réveiller le service déployé**, dans un terminal à part. Le conteneur
+s'éteint après cinq minutes sans trafic et met de deux à trois minutes et
+demie à repartir : à lancer en premier.
+
+```bash
+curl -s -m 300 -L -o /dev/null https://clement-rbl--triage-chsa-service.modal.run/sante \
+  && echo "service réveillé"
+```
+
+**2. Rejouer les tests**, une dizaine de secondes au plus :
+
+```bash
+uv run pytest
+```
+
+**3. Lancer le service en local**, sans GPU. Ce terminal reste ouvert. Le
+barème répond à la place du modèle, et chaque réponse l'indique
+(`"moteur": "regles"`).
+
+```bash
+TRIAGE_MOTEUR=regles uv run uvicorn triage.api.app:app --port 8080
+```
+
+**4. L'interroger**, depuis un second terminal :
+
+```bash
+curl -s http://127.0.0.1:8080/sante
+
+# dossier complet en une passe : urgence maximale attendue
+curl -s -X POST http://127.0.0.1:8080/triage \
+  -H 'Content-Type: application/json' \
+  -d '{"langue": "fr", "motif": "douleur thoracique oppressive", "age": 58,
+       "sexe": "masculin", "signe_gravite": true,
+       "constantes": {"frequence_cardiaque": 118, "pression_systolique": 88,
+                      "saturation": 88, "douleur": 8}}' \
+  | python3 -m json.tool --no-ensure-ascii
+
+# SpO2 à 150 % : valeur impossible, refusée avec le code HTTP 422
+curl -s -w "\nHTTP %{http_code}\n" -X POST http://127.0.0.1:8080/triage \
+  -H 'Content-Type: application/json' \
+  -d '{"motif": "malaise", "constantes": {"saturation": 150}}'
+
+# intégrité du journal d'audit
+curl -s http://127.0.0.1:8080/audit
+```
+
+**5. Les pages web**, dans un navigateur :
+
+| Page | Contenu |
+|---|---|
+| <http://127.0.0.1:8080/> | questionnaire adaptatif ; en local, laisser le champ de clé vide et cliquer **Commencer** |
+| <http://127.0.0.1:8080/comment-ca-marche> | ce que décide le barème, ce que décide le modèle |
+| <http://127.0.0.1:8080/docs> | documentation interactive, trois dossiers d'exemple sous `POST /triage` |
+
+Deux parcours à comparer dans le questionnaire : une douleur thoracique avec
+signe de gravité s'arrête après **4 questions** (urgence maximale), un mal de
+gorge sans signe de gravité en demande **12** (prise en charge différée).
+
+**6. Le service déployé**, cette fois avec le modèle (`"moteur": "vllm"`). Les
+mêmes pages sont servies sur <https://clement-rbl--triage-chsa-service.modal.run>,
+avec la clé d'accès. C'est là que le garde-fou se voit, puisqu'en local le
+modèle et le barème ne font qu'un :
+
+```bash
+curl -s -L -X POST https://clement-rbl--triage-chsa-service.modal.run/triage \
+  -H "X-Cle-Api: <clé>" -H 'Content-Type: application/json' \
+  -d '{"langue": "fr", "motif": "entorse de la cheville en jouant au football",
+       "age": 24, "sexe": "masculin", "signe_gravite": false,
+       "constantes": {"douleur": 5, "frequence_cardiaque": 78, "saturation": 99}}' \
+  | python3 -m json.tool --no-ensure-ascii
+```
+
+Lors des essais, le modèle annonçait une prise en charge différée sur ce cas ;
+le barème, qui exige l'urgence modérée dès 5/10 de douleur, a relevé le niveau
+(`"escalade": true`).
 
 ## Intégration continue
 
