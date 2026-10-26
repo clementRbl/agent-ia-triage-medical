@@ -127,7 +127,9 @@ class MoteurVLLM:
 
     def generer(self, instruction: str, langue: Langue) -> Generation:
         charge = self.charge(instruction)
-        with httpx.Client(timeout=self.delai) as client:
+        # Redirections suivies : Modal repond 303 a une requete qui depasse
+        # 150 s (demarrage a froid du GPU) et renvoie le resultat a l'adresse indiquee.
+        with httpx.Client(timeout=self.delai, follow_redirects=True) as client:
             reponse = client.post(
                 f"{self.base_url}/v1/chat/completions",
                 json=charge,
@@ -226,4 +228,5 @@ def moteur_depuis_environnement() -> Moteur:
         cle_api=os.environ.get("VLLM_CLE_API") or None,
         proxy_cle=os.environ.get("VLLM_PROXY_CLE") or None,
         proxy_secret=os.environ.get("VLLM_PROXY_SECRET") or None,
+        delai=float(os.environ.get("VLLM_DELAI_S") or DELAI_DEFAUT),
     )
