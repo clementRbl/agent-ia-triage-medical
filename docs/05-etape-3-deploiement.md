@@ -52,10 +52,13 @@ Client (accueil, SIH, curl)
    GPU A10G — Modal, plan gratuit
 ```
 
-Un seul conteneur GPU. vLLM y est lancé comme sous-processus et l'API
-l'interroge sur la boucle locale : deux conteneurs séparés doubleraient le
-démarrage à froid et feraient transiter chaque requête par le réseau sans
-contrepartie.
+Deux fonctions Modal. L'API tourne sur un petit conteneur CPU et vérifie la
+clé d'appel ; vLLM tourne sur le GPU et n'accepte que les requêtes portant le
+jeton du proxy Modal, que seule l'API possède. La première version logeait les
+deux dans un seul conteneur GPU : toute requête anonyme, même refusée en 401,
+allumait alors l'A10G, et un appel toutes les quatre minutes suffisait à le
+garder allumé en continu (environ 26 $ par jour). Le saut réseau entre l'API et
+vLLM ajoute quelques millisecondes, négligeables devant la génération.
 
 ### Le choix de l'hébergeur
 

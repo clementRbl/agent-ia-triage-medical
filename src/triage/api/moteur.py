@@ -80,12 +80,22 @@ class MoteurVLLM:
     base_url: str
     modele: str
     cle_api: str | None = None
+    # Jeton du proxy Modal : sur Modal, vLLM n'accepte que les appels qui le
+    # portent, pour qu'une requete anonyme ne puisse pas allumer le GPU.
+    proxy_cle: str | None = None
+    proxy_secret: str | None = None
     tokens_max: int = TOKENS_MAX_DEFAUT
     delai: float = DELAI_DEFAUT
     nom: str = "vllm"
 
     def _entetes(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.cle_api}"} if self.cle_api else {}
+        entetes: dict[str, str] = {}
+        if self.cle_api:
+            entetes["Authorization"] = f"Bearer {self.cle_api}"
+        if self.proxy_cle and self.proxy_secret:
+            entetes["Modal-Key"] = self.proxy_cle
+            entetes["Modal-Secret"] = self.proxy_secret
+        return entetes
 
     def disponible(self) -> bool:
         try:
@@ -214,4 +224,6 @@ def moteur_depuis_environnement() -> Moteur:
         base_url=base_url,
         modele=os.environ.get("VLLM_MODELE", "triage-qwen3-1.7b"),
         cle_api=os.environ.get("VLLM_CLE_API") or None,
+        proxy_cle=os.environ.get("VLLM_PROXY_CLE") or None,
+        proxy_secret=os.environ.get("VLLM_PROXY_SECRET") or None,
     )

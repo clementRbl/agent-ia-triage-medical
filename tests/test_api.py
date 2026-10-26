@@ -562,3 +562,37 @@ class TestDocumentationInteractive:
         description = client_protege.get("/openapi.json").json()["info"]["description"]
         assert "cle-de-test" not in description
         assert "seconde-cle" not in description
+
+
+class TestEntetesVLLM:
+    """En-tetes envoyes a vLLM : sur Modal, sans jeton proxy, le GPU refuse l'appel."""
+
+    def test_le_jeton_proxy_modal_est_transmis(self):
+        from triage.api.moteur import MoteurVLLM
+
+        moteur = MoteurVLLM(
+            base_url="http://exemple.invalide",
+            modele="triage",
+            proxy_cle="wk-cle",
+            proxy_secret="ws-secret",
+        )
+        entetes = moteur._entetes()
+        assert entetes["Modal-Key"] == "wk-cle"
+        assert entetes["Modal-Secret"] == "ws-secret"
+
+    def test_un_jeton_proxy_incomplet_n_est_pas_envoye(self):
+        from triage.api.moteur import MoteurVLLM
+
+        moteur = MoteurVLLM(base_url="http://exemple.invalide", modele="triage", proxy_cle="wk-cle")
+        assert "Modal-Key" not in moteur._entetes()
+
+    def test_le_jeton_proxy_est_lu_dans_l_environnement(self, monkeypatch):
+        from triage.api.moteur import MoteurVLLM, moteur_depuis_environnement
+
+        monkeypatch.delenv("TRIAGE_MOTEUR", raising=False)
+        monkeypatch.setenv("VLLM_BASE_URL", "http://exemple.invalide")
+        monkeypatch.setenv("VLLM_PROXY_CLE", "wk-cle")
+        monkeypatch.setenv("VLLM_PROXY_SECRET", "ws-secret")
+        moteur = moteur_depuis_environnement()
+        assert isinstance(moteur, MoteurVLLM)
+        assert moteur._entetes()["Modal-Secret"] == "ws-secret"
