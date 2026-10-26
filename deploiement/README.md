@@ -53,13 +53,20 @@ L'adaptateur pèse 67 Mo. Republier le modèle fusionné (3,4 Go) redistribuerai
 
 ### 2. Créer le secret Modal
 
+Créer d'abord un jeton de proxy sur <https://modal.com/settings/proxy-auth-tokens>
+(il commence par `wk-`, son secret par `ws-`), puis :
+
 ```bash
 uv run modal secret create triage-secrets \
-  TRIAGE_CLES_API="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+  TRIAGE_CLES_API="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')" \
+  VLLM_PROXY_CLE="wk-..." \
+  VLLM_PROXY_SECRET="ws-..."
 ```
 
-Ce secret protège l'endpoint. Sans clé configurée le service reste ouvert :
-c'est le mode développement local, jamais un mode de production.
+`TRIAGE_CLES_API` protège l'API ; sur Modal, le service refuse de démarrer
+sans elle. Le jeton de proxy protège vLLM : sans lui, Modal répond 401 avant
+d'allumer le GPU, si bien qu'une requête anonyme ne coûte rien. Le déploiement
+échoue tant que l'une des trois valeurs manque dans le secret.
 
 ### 3. Déployer
 
@@ -103,7 +110,9 @@ l'exécution.
 
 ```bash
 nouvelle=$(python -c 'import secrets; print(secrets.token_urlsafe(32))')
-uv run modal secret create triage-secrets TRIAGE_CLES_API="$nouvelle" --force
+# --force remplace tout le secret : les deux valeurs du jeton de proxy sont à reprendre.
+uv run modal secret create triage-secrets TRIAGE_CLES_API="$nouvelle" \
+  VLLM_PROXY_CLE="wk-..." VLLM_PROXY_SECRET="ws-..." --force
 gh secret set TRIAGE_CLE_API --body "$nouvelle"
 uv run modal deploy deploiement/modal_app.py
 ```
