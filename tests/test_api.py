@@ -596,3 +596,19 @@ class TestEntetesVLLM:
         moteur = moteur_depuis_environnement()
         assert isinstance(moteur, MoteurVLLM)
         assert moteur._entetes()["Modal-Secret"] == "ws-secret"
+
+    def test_le_delai_d_appel_est_reglable(self, monkeypatch):
+        """Sur Modal, le premier appel attend le demarrage du GPU, bien au-dela de 60 s."""
+        from triage.api.moteur import DELAI_DEFAUT, MoteurVLLM, moteur_depuis_environnement
+
+        monkeypatch.delenv("TRIAGE_MOTEUR", raising=False)
+        monkeypatch.setenv("VLLM_BASE_URL", "http://exemple.invalide")
+        monkeypatch.delenv("VLLM_DELAI_S", raising=False)
+        moteur = moteur_depuis_environnement()
+        assert isinstance(moteur, MoteurVLLM)
+        assert moteur.delai == DELAI_DEFAUT
+
+        monkeypatch.setenv("VLLM_DELAI_S", "600")
+        moteur = moteur_depuis_environnement()
+        assert isinstance(moteur, MoteurVLLM)
+        assert moteur.delai == 600.0

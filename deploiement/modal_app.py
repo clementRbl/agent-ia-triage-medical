@@ -264,6 +264,10 @@ def service() -> Any:
         raise RuntimeError("URL de vllm_serveur introuvable : fonction non déployée.")
     os.environ["VLLM_BASE_URL"] = url_vllm
     os.environ["VLLM_MODELE"] = NOM_SERVI
+    # Le premier triage reveille le GPU (environ deux minutes) : le delai par
+    # defaut de 60 s faisait echouer cet appel en 500 alors que vLLM finissait
+    # de demarrer.
+    os.environ["VLLM_DELAI_S"] = str(DELAI_DEMARRAGE_S)
     os.environ["TRIAGE_JOURNAL"] = "/journal/journal_triage.jsonl"
 
     from triage.api.app import app as application
