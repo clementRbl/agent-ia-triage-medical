@@ -168,10 +168,13 @@ class Rapport:
 
 # Le service plafonne les triages (20 par minute) et la campagne depasse ce
 # rythme : sur un 429, on attend la place annoncee par Retry-After au lieu de
-# compter un refus comme une panne. Au-dela d'ATTENTE_MAX_S (plafond du jour
-# atteint), on n'attend pas des heures : le refus est compte comme un echec.
-REPRISES_SUR_LIMITE = 3
+# compter un refus comme une panne. Budget en temps et non en nombre de
+# reprises : sous charge, les places se liberent une a une et plusieurs threads
+# se les disputent, un meme appel peut donc essuyer bien plus de trois refus.
+# Au-dela d'ATTENTE_MAX_S pour une seule attente (plafond du jour atteint), on
+# n'attend pas des heures : le refus est compte comme un echec.
 ATTENTE_MAX_S = 120.0
+ATTENTE_TOTALE_MAX_S = 300.0
 
 
 class Client:
@@ -213,7 +216,8 @@ class Client:
         Une coupure reseau ne doit pas interrompre la campagne : elle se compte
         comme un echec, et les mesures deja acquises restent exploitables.
         """
-        for _ in range(REPRISES_SUR_LIMITE + 1):
+        deja_attendu = 0.0
+        while True:
             # Le chronometre repart apres chaque attente : la latence mesuree
             # reste celle du service, pas celle de la file imposee par la limite.
             debut = time.perf_counter()
@@ -221,10 +225,13 @@ class Client:
                 reponse = self._appeler("POST", "/triage", json=dossier)
             except httpx.HTTPError:
                 return (time.perf_counter() - debut) * 1000, None
+            if reponse.status_code != 429:
+                break
             attente = float(reponse.headers.get("Retry-After", ATTENTE_MAX_S))
-            if reponse.status_code != 429 or attente > ATTENTE_MAX_S:
+            if attente > ATTENTE_MAX_S or deja_attendu + attente > ATTENTE_TOTALE_MAX_S:
                 break
             time.sleep(attente)
+            deja_attendu += attente
         return (time.perf_counter() - debut) * 1000, reponse
 
     def get(self, chemin: str) -> httpx.Response:
