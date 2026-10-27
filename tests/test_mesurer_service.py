@@ -52,9 +52,19 @@ def test_n_attend_pas_des_heures_quand_le_plafond_du_jour_est_atteint(monkeypatc
     assert attentes == []
 
 
-def test_abandonne_apres_quelques_reprises(monkeypatch):
+def test_insiste_tant_que_des_places_se_liberent_une_a_une(monkeypatch):
+    # Sous charge, un meme appel peut essuyer de nombreux refus courts d'affilee.
     monkeypatch.setattr(mesure.time, "sleep", lambda _: None)
-    refus = [httpx.Response(429, headers={"Retry-After": "1"}) for _ in range(10)]
+    refus = [httpx.Response(429, headers={"Retry-After": "2"}) for _ in range(10)]
+    _, reponse = _client([*refus, httpx.Response(200, json={})]).triage({})
+    assert reponse.status_code == 200
+
+
+def test_abandonne_quand_le_budget_d_attente_est_epuise(monkeypatch):
+    attentes: list[float] = []
+    monkeypatch.setattr(mesure.time, "sleep", attentes.append)
+    refus = [httpx.Response(429, headers={"Retry-After": "100"}) for _ in range(10)]
     _, reponse = _client(refus).triage({})
-    # Toujours refuse apres les reprises : compte comme un echec par l'appelant.
+    # Toujours refuse au bout de 300 s d'attente cumulee : compte comme un echec.
     assert reponse.status_code == 429
+    assert sum(attentes) <= mesure.ATTENTE_TOTALE_MAX_S
