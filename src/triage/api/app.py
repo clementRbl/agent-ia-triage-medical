@@ -12,19 +12,22 @@ clinique et une fuite de donnees de sante.
 
 from __future__ import annotations
 
+import logging
+import math
 import os
 from collections.abc import Iterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Final
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import APIKeyHeader
 
 from triage.api.demo import PAGE
 from triage.api.explications import PAGE_EXPLICATIONS
 from triage.api.journal import CHEMIN_DEFAUT, Journal, verifier_chaine
+from triage.api.limite import LimiteDebit
 from triage.api.moteur import moteur_depuis_environnement
 from triage.api.questionnaire import Entretien, Question
 from triage.api.schemas import (
@@ -42,6 +45,10 @@ from triage.schema import Constantes, Langue
 
 VERSION_SERVICE: Final[str] = "0.1.0"
 ENTETE_CLE: Final[str] = "X-Cle-Api"
+
+# Refus d'acces et limites atteintes, lisibles dans les journaux de l'hebergeur :
+# sans eux, une tentative d'intrusion ou un script en boucle passerait inapercu.
+journal_securite = logging.getLogger("triage.securite")
 
 # Limites d'usage, affichees dans la documentation generee : un utilisateur qui
 # ignore ce que l'outil ne sait pas faire lui fera confiance a tort.
@@ -85,6 +92,10 @@ un usage réel par quelqu'un qui n'aurait pas lu les limites ci-dessus.
 
 **Pas de clé ?** `/sante` répond sans authentification, et la page de
 démonstration à la racine explique la marche à suivre.
+
+**Plafonds d'appel.** Ouvrir un entretien et `POST /triage` sont limités à
+20 appels par minute et 300 par jour, pour l'ensemble des appelants. Au-delà,
+le service répond `429` avec un en-tête `Retry-After` (en secondes).
 
 ### Deux façons de trier
 
@@ -148,7 +159,20 @@ def _cles_autorisees() -> set[str]:
     return {cle.strip() for cle in brut.split(",") if cle.strip()}
 
 
-def verifier_cle(cle: Annotated[str | None, Depends(schema_cle)] = None) -> None:
+def _signaler_refus(request: Request, motif: str) -> None:
+    """Une ligne par refus, sans jamais la cle presentee : un journal ne porte pas de secret."""
+    client = request.client.host if request.client else "inconnu"
+    journal_securite.warning(
+        "refus motif=%s route=%s %s ip=%s x_forwarded_for=%s",
+        motif,
+        request.method,
+        request.url.path,
+        client,
+        request.headers.get("x-forwarded-for", "-"),
+    )
+
+
+def verifier_cle(request: Request, cle: Annotated[str | None, Depends(schema_cle)] = None) -> None:
     """Refuse l'appel si la cle presentee n'est pas connue.
 
     Sans cle configuree le service reste ouvert : c'est le mode developpement
@@ -158,11 +182,30 @@ def verifier_cle(cle: Annotated[str | None, Depends(schema_cle)] = None) -> None
     if not autorisees:
         return
     if cle not in autorisees:
+        _signaler_refus(request, "cle_absente" if cle is None else "cle_invalide")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Clé d'API absente ou invalide.",
             headers={"WWW-Authenticate": ENTETE_CLE},
         )
+
+
+def limiter_triage(request: Request) -> None:
+    """Refuse en 429 au-dela des plafonds ; a placer apres verifier_cle.
+
+    Apres, et pas avant : un appel sans cle ne doit pas consommer le quota
+    des appelants autorises.
+    """
+    limite: LimiteDebit = app.state.limite
+    attente = limite.consommer()
+    if attente is None:
+        return
+    _signaler_refus(request, "limite_atteinte")
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="Trop de triages demandés : réessayez dans quelques instants.",
+        headers={"Retry-After": str(math.ceil(attente))},
+    )
 
 
 def construire_service() -> ServiceTriage:
@@ -173,6 +216,7 @@ def construire_service() -> ServiceTriage:
 @asynccontextmanager
 async def cycle_de_vie(app: FastAPI) -> Any:
     app.state.service = construire_service()
+    app.state.limite = LimiteDebit()
     yield
 
 
@@ -279,7 +323,11 @@ def version() -> Version:
     )
 
 
-@app.post("/entretiens", tags=["triage"], dependencies=[Depends(verifier_cle)])
+@app.post(
+    "/entretiens",
+    tags=["triage"],
+    dependencies=[Depends(verifier_cle), Depends(limiter_triage)],
+)
 def ouvrir_entretien(demande: OuvertureEntretien) -> EtatEntretien:
     """Ouvre un entretien et renvoie la premiere question."""
     courant = service()
@@ -308,7 +356,7 @@ def repondre(session: str, reponse: ReponseSoumise) -> EtatEntretien:
     return _etat(session, entretien, courant)
 
 
-@app.post("/triage", tags=["triage"], dependencies=[Depends(verifier_cle)])
+@app.post("/triage", tags=["triage"], dependencies=[Depends(verifier_cle), Depends(limiter_triage)])
 def triage_direct(demande: DemandeTriageDirect) -> TriageSortie:
     """Trie un dossier complet en une passe, pour integration au SIH."""
     courant = service()
