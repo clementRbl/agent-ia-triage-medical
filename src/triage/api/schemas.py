@@ -172,7 +172,12 @@ class DemandeTriageDirect(BaseModel):
             "À lui seul, il place le cas en urgence maximale.",
         ),
     ]
-    antecedents: Annotated[list[str], Field(default_factory=list, max_length=20)]
+    # Chaque element est borne, pas seulement la liste : 20 chaines de plusieurs
+    # megaoctets passeraient sinon par l'anonymiseur puis dans le journal.
+    antecedents: Annotated[
+        list[Annotated[str, Field(min_length=1, max_length=200)]],
+        Field(default_factory=list, max_length=20),
+    ]
     constantes: ConstantesEntree = Field(default_factory=ConstantesEntree)
 
     model_config = ConfigDict(

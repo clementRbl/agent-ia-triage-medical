@@ -347,6 +347,64 @@ class TestProtection:
         assert client_protege.get("/sante").status_code == 200
 
 
+CLE_VALIDE = {"X-Cle-Api": "cle-de-test"}
+
+
+class TestLimiteDeDebit:
+    def test_au_dela_de_vingt_triages_par_minute_le_service_repond_429(self, client_protege):
+        for _ in range(20):
+            assert client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE).is_success
+        reponse = client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE)
+        assert reponse.status_code == 429
+        assert 0 < int(reponse.headers["Retry-After"]) <= 60
+        assert "réessayez" in reponse.json()["detail"]
+
+    def test_l_ouverture_d_entretien_partage_le_meme_quota(self, client_protege):
+        for _ in range(20):
+            client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE)
+        reponse = client_protege.post("/entretiens", json={"langue": "fr"}, headers=CLE_VALIDE)
+        assert reponse.status_code == 429
+
+    def test_un_appel_sans_cle_ne_consomme_pas_le_quota(self, client_protege):
+        for _ in range(25):
+            assert client_protege.post("/triage", json=DOSSIER_BENIN).status_code == 401
+        reponse = client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE)
+        assert reponse.status_code == 200
+
+
+class TestJournalDeSecurite:
+    def test_une_cle_invalide_est_signalee_sans_la_cle(self, client_protege, caplog):
+        with caplog.at_level("WARNING", logger="triage.securite"):
+            client_protege.post(
+                "/triage", json=DOSSIER_BENIN, headers={"X-Cle-Api": "cle-volee-123"}
+            )
+        message = caplog.records[-1].getMessage()
+        assert "motif=cle_invalide" in message
+        assert "route=POST /triage" in message
+        assert "cle-volee-123" not in message
+
+    def test_la_limite_atteinte_est_signalee(self, client_protege, caplog):
+        for _ in range(20):
+            client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE)
+        with caplog.at_level("WARNING", logger="triage.securite"):
+            client_protege.post("/triage", json=DOSSIER_BENIN, headers=CLE_VALIDE)
+        assert "motif=limite_atteinte" in caplog.records[-1].getMessage()
+
+
+class TestBornesDesAntecedents:
+    def test_un_antecedent_de_plus_de_200_caracteres_est_refuse(self, client):
+        dossier = {**DOSSIER_BENIN, "antecedents": ["a" * 201]}
+        assert client.post("/triage", json=dossier).status_code == 422
+
+    def test_un_antecedent_vide_est_refuse(self, client):
+        dossier = {**DOSSIER_BENIN, "antecedents": [""]}
+        assert client.post("/triage", json=dossier).status_code == 422
+
+    def test_un_antecedent_de_200_caracteres_passe(self, client):
+        dossier = {**DOSSIER_BENIN, "antecedents": ["a" * 200]}
+        assert client.post("/triage", json=dossier).status_code == 200
+
+
 class TestChargeVLLM:
     """Reglages de la requete envoyee a vLLM.
 
